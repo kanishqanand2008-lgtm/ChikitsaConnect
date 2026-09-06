@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChikitsaConnect - Rural Healthcare & Emergency Tele-Care</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- SITE HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand-section">
+        <div class="brand-icon">🏥</div>
+        <div class="brand-text">
+          <h1 data-i18n="siteTitle">ChikitsaConnect</h1>
+          <p data-i18n="siteTagline">Connecting You to Care</p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Language Switcher -->
+        <div class="lang-switcher">
+          <button class="lang-btn" data-lang="en">English</button>
+          <button class="lang-btn" data-lang="te">తెలుగు</button>
+          <button class="lang-btn" data-lang="hi">हिंदी</button>
+        </div>
+
+        <!-- Role Badge (Locked once selected, no switch option) -->
+        <div class="role-badge-box">
+          <span id="active-role-badge" class="role-badge patient" data-i18n="patientMode">Patient Mode</span>
+          <span id="role-info-text" style="color: #e2e8f0; font-size: 0.85rem;">Citizen Care</span>
+        </div>
+
+        <!-- Emergency SOS Quick Button -->
+        <button id="header-sos-btn" class="emergency-quick-btn">
+          <span>🚨</span> <span data-i18n="emergencySOS">Emergency 108</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION BAR (All 9 Modules) -->
+  <nav class="nav-container">
+    <div class="nav-tabs">
+      <button class="tab-btn active" data-tab="telecon">
+        <span>🩺</span> <span data-i18n="navTelecon">Teleconsultation</span>
+      </button>
+      <button class="tab-btn" data-tab="queue">
+        <span>📅</span> <span data-i18n="navQueue">Appointments & Queue</span>
+      </button>
+      <button class="tab-btn" data-tab="triage">
+        <span>🌡️</span> <span data-i18n="navTriage">Digital Triage</span>
+      </button>
+      <button class="tab-btn" data-tab="records">
+        <span>📁</span> <span data-i18n="navRecords">Patient Records</span>
+      </button>
+      <button class="tab-btn" data-tab="referrals">
+        <span>🚑</span> <span data-i18n="navReferrals">Referral Tracking</span>
+      </button>
+      <button class="tab-btn" data-tab="diagnostics">
+        <span>🔬</span> <span data-i18n="navDiagnostics">Diagnostics</span>
+      </button>
+      <button class="tab-btn" data-tab="highrisk">
+        <span>⚠️</span> <span data-i18n="navHighRisk">High-Risk Follow-up</span>
+      </button>
+      <!-- Facility Dashboard: Strictly visible for Hospital Workers only -->
+      <button class="tab-btn" id="tab-nav-facility" data-tab="facility" style="display: none;">
+        <span>🏢</span> <span data-i18n="navFacility">Facility Dashboard</span>
+        <span class="worker-only-tag" data-i18n="workerOnly">Staff Only</span>
+      </button>
+      <button class="tab-btn" data-tab="emergency">
+        <span>🚨</span> <span data-i18n="navEmergency">Emergency Escalation</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN APPLICATION CONTENT -->
+  <main class="main-wrapper">
+
+    <!-- ==================== MODULE 1: TELECONSULTATION ==================== -->
+    <section id="view-telecon" class="module-view active">
+      <div class="section-header">
+        <div class="section-title">
+          <h2><span>🩺</span> <span data-i18n="navTelecon">Teleconsultation</span></h2>
+          <p>Connect live with primary health centre doctors and medical specialists from your village.</p>
+        </div>
+        <div>
+          <button class="btn btn-secondary" onclick="chikitsaApp.speakText('టెలికన్సల్టేషన్ విభాగం. మీరు గ్రామం నుండే డాక్టర్‌తో వీడియో లేదా ఆడియో ద్వారా మాట్లాడవచ్చు.')">
+            🔊 <span data-i18n="listenAudio">Listen</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Live Video Simulation -->
+        <div class="telecon-room">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span class="badge badge-green">🟢 Connected to PHC Rampur</span>
+            <small style="color: #94a3b8;">Encrypted Tele-Medicine Session</small>
+          </div>
+
+          <div class="video-grid">
+            <!-- Doctor Video Screen -->
+            <div class="video-screen">
+              <div class="video-screen-badge">Dr. Sunitha Rao (Medical Officer)</div>
+              <div class="avatar-circle">👩‍⚕️</div>
+              <p style="font-size: 0.9rem; color: #cbd5e1;">Live Consultation Feed</p>
+              <div style="font-size: 0.75rem; color: #4ade80; margin-top: 4px;">● Audio/Video Active (24 FPS)</div>
+            </div>
+
+            <!-- Patient Self View -->
+            <div class="video-screen" id="patient-cam-view" style="aspect-ratio: 4/3;">
+              <div class="video-screen-badge">You (Patient Cam)</div>
+              <div class="avatar-circle" style="width: 60px; height: 60px; font-size: 26px; background: #0284c7;">👤</div>
+              <small style="color: #94a3b8;">Local Feed</small>
+            </div>
+          </div>
+
+          <!-- Media Controls -->
+          <div class="telecon-controls">
+            <button id="tele-mic-toggle" class="tele-ctrl-btn" title="Mute / Unmute">🎤</button>
+            <button id="tele-cam-toggle" class="tele-ctrl-btn" title="Camera On / Off">📹</button>
+            <button id="tele-bandwidth-toggle" class="btn btn-secondary" style="font-size: 0.85rem; border-radius: 20px;">
+              📶 Rural 2G Mode
+            </button>
+            <button id="tele-end-call" class="tele-ctrl-btn danger" title="End Tele-visit" onclick="alert('Teleconsultation ended.')">📞</button>
+          </div>
+        </div>
+
+        <!-- Doctor's Prescription & Clinical Notes Pad -->
+        <div class="card">
+          <h3 style="margin-bottom: 12px; color: var(--primary-dark); display: flex; justify-content: space-between;">
+            <span>📋 Digital Prescription Pad</span>
+            <span class="badge badge-blue">Token: OPD-014</span>
+          </h3>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 14px;">
+            Prescriptions entered here will instantly link to the patient's record card.
+          </p>
+
+          <div class="form-group">
+            <label>Patient Vitals on File:</label>
+            <div style="background: #f8fafc; padding: 10px; border-radius: 8px; font-size: 0.9rem; border: 1px solid #e2e8f0;">
+              <strong>BP:</strong> 118/76 mmHg &nbsp;|&nbsp; <strong>Pulse:</strong> 80 bpm &nbsp;|&nbsp; <strong>Temp:</strong> 98.6°F &nbsp;|&nbsp; <strong>SpO2:</strong> 98%
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tele-doc-notes">Doctor's Clinical Notes & Rx:</label>
+            <textarea id="tele-doc-notes" class="form-control" rows="4" placeholder="e.g. Tab. Paracetamol 500mg TDS x 3 days, ORS 1 packet in 1L water, Sputum test advised."></textarea>
+          </div>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button id="tele-save-rx" class="btn btn-primary">
+              💾 Save to Patient Records
+            </button>
+            <button class="btn btn-secondary" onclick="window.print()">
+              🖨️ Print Prescription
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 2: APPOINTMENT & QUEUE ==================== -->
+    <section id="view-queue" class="module-view">
+      <div class="section-header">
+        <div class="section-title">
+          <h2><span>📅</span> <span data-i18n="navQueue">Appointments & Queue</span></h2>
+          <p>Transparent rural OPD token tracking, estimated wait time, and audio token call-out.</p>
+        </div>
+        <div>
+          <button id="btn-get-token" class="btn btn-primary btn-lg">
+            ➕ <span data-i18n="generateToken">Take New OPD Token</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Token Board -->
+      <div class="queue-board">
+        <div>
+          <span style="font-size: 1rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;" data-i18n="nowServing">Now Serving</span>
+          <div id="current-queue-number" class="queue-current-token">OPD-014</div>
+          <button id="btn-announce-token" class="btn btn-secondary" style="background: rgba(255,255,255,0.1); color:#fff; border-color: rgba(255,255,255,0.2);">
+            🔊 Voice Announcement
+          </button>
+        </div>
+
+        <div style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 24px;">
+          <span style="font-size: 0.9rem; color: #94a3b8;" data-i18n="yourToken">Your Token</span>
+          <div id="my-token-display" style="font-size: 2.2rem; font-weight: 800; color: #4ade80;">OPD-019</div>
+          <small style="color: #cbd5e1;">Doctor: Dr. Sunitha Rao (Room 1)</small>
+        </div>
+
+        <div style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 24px;">
+          <span style="font-size: 0.9rem; color: #94a3b8;" data-i18n="estWait">Est. Wait Time</span>
+          <div style="font-size: 2.2rem; font-weight: 800; color: #f59e0b;">~15 min</div>
+          <small style="color: #cbd5e1;">3 Patients ahead of you</small>
+        </div>
+      </div>
+
+      <!-- Queue Table -->
+      <div class="card">
+        <h3 style="margin-bottom: 16px;">Live OPD Token Roster - Today</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Token</th>
+                <th>Patient Name</th>
+                <th>Department</th>
+                <th>Doctor</th>
+                <th>Room</th>
+                <th>Status</th>
+                <th>Est. Wait</th>
+              </tr>
+            </thead>
+            <tbody id="queue-tokens-list">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 3: DIGITAL TRIAGE ==================== -->
+    <section id="view-triage" class="module-view">
+      <div class="section-header">
+        <div class="section-title">
+          <h2><span>🌡️</span> <span data-i18n="navTriage">Digital Triage</span></h2>
+          <p data-i18n="triageDesc">Rural symptom assessment to determine if your condition is mild, urgent, or an emergency.</p>
+        </div>
+        <div>
+          <button class="btn btn-secondary" onclick="chikitsaApp.speakText('డిజిటల్ ట్రియాజ్. మీ లక్షణాన్ని ఎంచుకోండి. అది సాధారణమా లేదా అత్యవసరమా అని కంప్యూటర్ లెక్కిస్తుంది.')">
+            🔊 <span data-i18n="listenAudio">Listen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Triage Symptom Button Grid (Rural Friendly Large Targets) -->
+      <div class="card" style="margin-bottom: 24px;">
+        <h3 style="margin-bottom: 16px;">Select Primary Symptom / మీ ప్రధాన సమస్యను ఎంచుకోండి:</h3>
+        <div class="grid-3">
+          <button class="triage-symptom-btn" data-severity="green" data-symptom="mild_cold">
+            <span class="triage-icon">🤧</span>
+            <div>
+              <strong>Mild Cold & Cough</strong><br>
+              <small>జలుబు & సాధారణ దగ్గు / सामान्य जुकाम</small>
+            </div>
+          </button>
+
+          <button class="triage-symptom-btn" data-severity="yellow" data-symptom="fever_chills">
+            <span class="triage-icon">🤒</span>
+            <div>
+              <strong>High Fever & Chills</strong><br>
+              <small>తీవ్ర జ్వరం & చలి / तेज बुखार व कंपकंपी</small>
+            </div>
+          </button>
+
+          <button class="triage-symptom-btn" data-severity="red" data-symptom="chest_breathless">
+            <span class="triage-icon">🫁</span>
+            <div>
+              <strong>Chest Pain / Breathless</strong><br>
+              <small>గుండె నొప్పి / శ్వాస ఆడకపోవడం / सीने में दर्द</small>
+            </div>
+          </button>
+
+          <button class="triage-symptom-btn" data-severity="yellow" data-symptom="stomach_diarrhea">
+            <span class="triage-icon">🤢</span>
+            <div>
+              <strong>Severe Vomiting / Diarrhea</strong><br>
+              <small>కడుపునొప్పి & విరేచనాలు / दस्त और उल्टी</small>
+            </div>
+          </button>
+
+          <button class="triage-symptom-btn" data-severity="red" data-symptom="maternal_bleeding">
+            <span class="triage-icon">🤰</span>
+            <div>
+              <strong>Pregnancy Pain / Bleeding</strong><br>
+              <small>గర్భవతి నొప్పులు / రక్తస్రావం / प्रसव पीड़ा</small>
+            </div>
+          </button>
+
+          <button class="triage-symptom-btn" data-severity="red" data-symptom="snakebite_poison">
+            <span class="triage-icon">🐍</span>
+            <div>
+              <strong>Snakebite / Poison / Sting</strong><br>
+              <small>పాము కాటు / విషపు కాటు / सर्पदंश</small>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Triage Assessment Result Card -->
+      <div id="triage-result-card" class="card" style="display: none; border-left: 8px solid var(--primary);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 id="triage-score-title" style="color: var(--primary-dark);">Triage Assessment</h3>
+          <span id="triage-score-badge" class="badge badge-green">Assessment</span>
+        </div>
+        <p id="triage-score-desc" style="font-size: 1.1rem; margin-bottom: 18px; color: var(--text-dark);"></p>
+
+        <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+          <button id="triage-action-btn" class="btn btn-primary btn-lg">Take Recommended Action</button>
+          <button class="btn btn-secondary btn-lg" onclick="document.getElementById('btn-open-add-patient').click();">
+            📋 Register As Patient With This Triage
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 4: PATIENT RECORDS ==================== -->
+    <section id="view-records" class="module-view">
+      <div class="section-header">
+        <div class="section-title">
+          <h2><span>📁</span> <span data-i18n="navRecords">Patient Records</span></h2>
+          <p>Digital repository of rural health cards, vitals, prescriptions, and ABHA IDs.</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button id="btn-open-add-patient" class="btn btn-primary">
+            ➕ <span data-i18n="registerPatient">Register New Patient</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Bar & Search -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <span style="font-weight: 700; color: var(--text-muted);">Total Registered:</span>
+            <span id="total-patients-count" class="badge badge-blue" style="font-size: 1rem;">4</span>
+          </div>
+          <div style="flex: 1; max-width: 450px;">
+            <input type="text" id="patient-search-input" class="form-control" placeholder="Search by Name, Village, Mobile, or ABHA ID..." data-i18n-ph="searchPatient">
+          </div>
+        </div>
+      </div>
+
+      <!-- Patient Records Table -->
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Patient ID & Token</th>
+              <th>Name / Demographics</th>
+              <th>Contact & Village</th>
+              <th>Condition / Symptoms</th>
+              <th>Triage</th>
+              <th>Latest Vitals</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="patient-records-list">
+            <!-- Dynamically populated from localStorage & mock data -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 5: REFERRAL TRACKING ==================== -->
+    <section id="view-referrals" class="module-view">
+      <div class="section-header">
+        <div class="section-title">
+          <h2><span>🚑</span> <span data-i18n="navReferrals">Referral Tracking</span></h2>
+          <p>End-to-end tracking: Village Sub-Centre ➔ Primary Health Centre ➔ Community Health Centre ➔ District Hospital.</p>
+        </div>
+        <div>
+          <button class="btn btn-primary" onclick="alert('Referral transfer slip request initiated.')">
+            ➕ Create Referral Slip
+          </button>
+        </div>
+      </div>
+
+      <!-- Referral Status Pipeline Diagram -->
+      <div class="card" style="margin-bottom: 20px; background: #f8fafc;">
+        <h4 style="margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Referral Pipeline Status</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div style="text-align: center; flex: 1;">
+            <div style="font-size: 28px;">🏡</div>
+            <strong>Village Sub-Centre</strong>
+            <div style="font-size: 0.8rem; color: #64748b;">ASHA / ANM Initial Flag</div>
+          </div>
+          <div style="font-size: 20px; color: #94a3b8;">➔</div>
+          <div style="text-align: center; flex: 1;">
+            <div style="font-size: 28px;">🏥</div>
+            <strong>Primary Health Centre</strong>
+            <div style="font-size: 0.8rem; color: #64748b;">MO Evaluation & Stabilization</div>
+          </div>
+          <div style="font-size: 20px; color: #94a3b8;">➔</div>
+          <div style="text-align: center; flex: 1;">
+            <div style="font-size: 28px;">🏨</div>
+            <strong>Community Health Centre</strong>
+            <div style="font-size: 0.8rem; color: #64748b;">Specialist Care / Surgeries</div>
+          </div>
+          <div style="font-size: 20px; color: #94a3b8;">➔</div>
+          <div style="text-align: center; flex: 1;">
+            <div style="font-size: 28px;">🏛️</div>
+            <strong>District Hospital</strong>
+            <div style="font-size: 0.8rem; color: #64748b;">Tertiary Care & ICU</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Referrals Table -->
+      <div class="card">
+        <h3 style="margin-bottom: 16px;">Active In-Transit & Completed Referrals</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Referral ID</th>
+                <th>Patient</th>
+                <th>Route (From ➔ To)</th>
+                <th>Clinical Reason</th>
+                <th>Urgency</th>
+                <th>Transport</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="referrals-list">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 6: DIAGNOSTICS ==================== -->
+    <section id="view-diagnostics" class="module-view">
+      <div class="section-header">
+        <div class="section-title">
+          <h2><span>🔬</span> <span data-i18n="navDiagnostics">Diagnostics</span></h2>
+          <p>Rural point-of-care lab tests, rapid diagnostic kits, blood glucose, and TB screenings.</p>
+        </div>
+        <div>
+          <button class="btn btn-primary" onclick="alert('Diagnostic test order placed. Lab technician notified.')">
+            ➕ Order Lab Test
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 16px;">Recent Laboratory Reports & Test Results</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Test ID</th>
+                <th>Patient Name</th>
+                <th>Test Type</th>
+                <th>Sample Time</th>
+                <th>Status</th>
+                <th>Result & Severity</th>
+                <th>Doctor / Lab Notes</th>
+              </tr>
+            </thead>
+            <tbody id="diagnostics-list">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 7: HIGH-RISK FOLLOW-UP ==================== -->
+    <section id="view-highrisk" class="module-view">
+      <div class="section-header">
+        <div class="section-title">
+          <h2><span>⚠️</span> <span data-i18n="navHighRisk">High-Risk Follow-up</span></h2>
+          <p>Active surveillance registry for High-Risk ANC pregnancy, SAM children, Hypertension, and TB DOTS.</p>
+        </div>
+        <div>
+          <button class="btn btn-secondary" onclick="chikitsaApp.speakText('అధిక ప్రమాద రోగుల పర్యవేక్షణ విభాగం. గర్భిణీ స్త్రీలు, పిల్లల పోషకాహార లోపం మరియు క్షయ రోగుల తదుపరి తేదీలను ఇక్కడ చూడవచ్చు.')">
+            🔊 <span data-i18n="listenAudio">Listen</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 16px;">High-Risk Patient Registry</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Registry ID</th>
+                <th>Patient & Village</th>
+                <th>Risk Category</th>
+                <th>Clinical Factor</th>
+                <th>Assigned ASHA</th>
+                <th>Next Follow-up</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="highrisk-list">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 8: FACILITY DASHBOARD (WORKER ONLY) ==================== -->
+    <section id="view-facility" class="module-view">
+      <div class="section-header">
+        <div class="section-title">
+          <h2><span>🏢</span> <span data-i18n="navFacility">Facility Dashboard</span> <span class="badge badge-yellow">Staff Restricted</span></h2>
+          <p>Live health facility bed capacity, medical oxygen inventory, essential drugs, and duty roster.</p>
+        </div>
+        <div>
+          <span style="font-size: 0.9rem; color: #0f766e; font-weight: 700; background: var(--primary-light); padding: 8px 14px; border-radius: 20px;">
+            🏥 Primary Health Centre - Rampur
+          </span>
+        </div>
+      </div>
+
+      <!-- Real-Time Bed Metrics -->
+      <div class="grid-4" style="margin-bottom: 24px;">
+        <div class="stat-card">
+          <div class="stat-icon">🛏️</div>
+          <div class="stat-info">
+            <h4>Total Beds</h4>
+            <div id="fac-total-beds" class="stat-value">24</div>
+          </div>
+        </div>
+
+        <div class="stat-card" style="border-left-color: var(--danger);">
+          <div class="stat-icon" style="background: var(--danger-light); color: var(--danger);">🛌</div>
+          <div class="stat-info">
+            <h4>Occupied Beds</h4>
+            <div id="fac-occ-beds" class="stat-value" style="color: var(--danger);">16</div>
+          </div>
+        </div>
+
+        <div class="stat-card" style="border-left-color: var(--success);">
+          <div class="stat-icon" style="background: var(--success-light); color: var(--success);">✅</div>
+          <div class="stat-info">
+            <h4>Vacant Beds</h4>
+            <div id="fac-vac-beds" class="stat-value" style="color: var(--success);">8</div>
+          </div>
+        </div>
+
+        <div class="stat-card" style="border-left-color: var(--warning);">
+          <div class="stat-icon" style="background: var(--accent-light); color: var(--warning);">🚨</div>
+          <div class="stat-info">
+            <h4>ICU / Trauma Vacant</h4>
+            <div id="fac-icu-beds" class="stat-value">1 / 4</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Worker Bed Control & Inventory -->
+      <div class="grid-2" style="margin-bottom: 24px;">
+        <div class="card">
+          <h3 style="margin-bottom: 14px;">Update Bed Occupancy (Live)</h3>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+            Quickly admit or discharge patients to keep district command center updated.
+          </p>
+          <div style="display: flex; gap: 14px;">
+            <button class="btn btn-danger" onclick="chikitsaApp.updateBedOccupancy(1)">
+              ➕ Admit Patient (+1 Occupied)
+            </button>
+            <button class="btn btn-success" onclick="chikitsaApp.updateBedOccupancy(-1)">
+              ➖ Discharge Patient (-1 Occupied)
+            </button>
+          </div>
+
+          <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;">
+
+          <h4>Oxygen Supply:</h4>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+            <span style="font-size: 28px;">🫁</span>
+            <div>
+              <strong id="fac-oxy-cylinders">11 / 14 Full Cylinders</strong>
+              <div style="font-size: 0.85rem; color: #16a34a;">Adequate for 72 hours emergency supply</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom: 14px;">Essential Medicine Inventory</h3>
+          <ul id="fac-meds-list" style="list-style: none;">
+            <!-- Dynamically populated -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- Staff On Duty -->
+      <div class="card">
+        <h3 style="margin-bottom: 14px;">Staff On Duty Roster (Today)</h3>
+        <ul id="fac-staff-list" style="list-style: none;">
+          <!-- Dynamically populated -->
+        </ul>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 9: EMERGENCY ESCALATION ==================== -->
+    <section id="view-emergency" class="module-view">
+      <div class="section-header" style="border-left-color: var(--danger);">
+        <div class="section-title">
+          <h2><span>🚨</span> <span data-i18n="navEmergency">Emergency Escalation</span></h2>
+          <p>Immediate 1-touch ambulance dispatch, 24x7 emergency medical helplines, and GPS dispatch.</p>
+        </div>
+      </div>
+
+      <div class="card" style="text-align: center; padding: 36px 20px; border: 3px solid var(--danger); margin-bottom: 24px; background: #fff5f5;">
+        <span style="font-size: 64px;">🚨</span>
+        <h2 style="color: var(--danger); font-size: 2rem; margin: 12px 0;">108 EMERGENCY SOS DISPATCH</h2>
+        <p style="max-width: 600px; margin: 0 auto 24px; font-size: 1.1rem; color: #475569;">
+          Pressing this button sends your live location and patient alert directly to the nearest 108 Ambulance Unit and PHC Emergency Room.
+        </p>
+        <button class="btn btn-danger btn-lg" style="font-size: 1.4rem; padding: 18px 40px;" onclick="alert('🚨 108 AMBULANCE DISPATCHED!\nNearest Vehicle AP-29-TA-1088 has received your SOS.\nEstimated Arrival: 12 Minutes.\nEmergency helpline has been alerted.'); chikitsaApp.speakText('108 అంబులెన్స్ బయలుదేరింది. 12 నిమిషాల్లో చేరుకుంటుంది.');">
+          🚨 TRIGGER 108 AMBULANCE NOW
+        </button>
+      </div>
+
+      <!-- Helplines Grid -->
+      <div class="grid-4">
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 36px; margin-bottom: 8px;">🚑</div>
+          <h3>108</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Free Emergency Ambulance</p>
+          <a href="tel:108" class="btn btn-danger" style="margin-top: 10px; width: 100%;">Call 108</a>
+        </div>
+
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 36px; margin-bottom: 8px;">👩‍⚕️</div>
+          <h3>104</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Health Advice & Doctor</p>
+          <a href="tel:104" class="btn btn-primary" style="margin-top: 10px; width: 100%;">Call 104</a>
+        </div>
+
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 36px; margin-bottom: 8px;">🤰</div>
+          <h3>102</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Maternity Drop Vehicle</p>
+          <a href="tel:102" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">Call 102</a>
+        </div>
+
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 36px; margin-bottom: 8px;">🆘</div>
+          <h3>112</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">All-India Emergency</p>
+          <a href="tel:112" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">Call 112</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== FLOATING AI HOSPITAL ASSISTANT ==================== -->
+  <button id="open-ai-fab" class="ai-fab" title="Open AI Hospital Assistant">
+    <span class="ai-fab-icon">🤖</span>
+    <span data-i18n="aiHelpBtn">Contact Hospital / AI Guide</span>
+  </button>
+
+  <!-- AI ASSISTANT CHAT MODAL (100% Button Driven) -->
+  <div id="modal-ai-chat" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+          <span>🤖</span> <span data-i18n="aiAssistantTitle">Chikitsa AI - Hospital Guide</span>
+        </h3>
+        <button id="btn-close-ai-chat" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px;">
+        <div class="ai-chat-window">
+          <div id="ai-chat-messages" class="ai-chat-messages">
+            <!-- Dynamic button-driven dialogue rendered by app.js -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <small style="color: #64748b;">Tap any button to get instant hospital guidance & audio readout.</small>
+        <button class="btn btn-secondary" onclick="chikitsaApp.refreshAIChatGreeting()">🔄 Reset Chat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ONBOARDING MODAL 1: LANGUAGE SELECTION ==================== -->
+  <div id="modal-language" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 520px; text-align: center;">
+      <div class="modal-header" style="justify-content: center;">
+        <h3>🌍 Choose Your Language / భాష / भाषा</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 1.05rem; color: #475569; margin-bottom: 20px;">
+          Please select your preferred language to continue:<br>
+          దయచేసి మీరు కొనసాగించాలనుకుంటున్న భాషను ఎంచుకోండి:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <button class="select-lang-choice btn btn-primary btn-lg" data-lang="en">
+            🇬🇧 Continue in English
+          </button>
+          <button class="select-lang-choice btn btn-primary btn-lg" data-lang="te" style="background: #047857;">
+            🇮🇳 తెలుగులో కొనసాగించండి (Telugu)
+          </button>
+          <button class="select-lang-choice btn btn-primary btn-lg" data-lang="hi" style="background: #0284c7;">
+            🇮🇳 हिंदी में जारी रखें (Hindi)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ONBOARDING MODAL 2: ROLE SELECTION ==================== -->
+  <div id="modal-role" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 data-i18n="selectRoleTitle">Welcome to ChikitsaConnect</h3>
+      </div>
+      <div class="modal-body">
+        <p style="color: #475569; margin-bottom: 16px;" data-i18n="selectRoleSubtitle">
+          Please choose how you are using this platform:
+        </p>
+
+        <div class="choice-grid">
+          <div id="btn-choose-patient" class="choice-card">
+            <div class="choice-icon">🧑‍🌾</div>
+            <h4 data-i18n="iAmPatient">I am a Patient</h4>
+            <p data-i18n="rolePatientDesc">Consult doctor, get token, check symptoms, or view records</p>
+          </div>
+
+          <div id="btn-choose-worker" class="choice-card">
+            <div class="choice-icon">👨‍⚕️</div>
+            <h4 data-i18n="iAmWorker">I am a Hospital Worker</h4>
+            <p data-i18n="roleWorkerDesc">Doctor, Nurse, ASHA, or Health Centre Staff</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== WORKER DETAILS MODAL ==================== -->
+  <div id="modal-worker-details" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 data-i18n="hospitalWorkerPromptTitle">Healthcare Worker Verification</h3>
+        <button class="modal-close" onclick="chikitsaApp.closeWorkerDetailsModal()">&times;</button>
+      </div>
+      <form id="worker-details-form">
+        <div class="modal-body">
+          <p style="color: #475569; margin-bottom: 16px; font-size: 0.9rem;">
+            Hospital workers gain administrative access to the Facility Dashboard, Bed Management, and Emergency Escalations.
+          </p>
+
+          <div class="form-group">
+            <label for="worker-name-input" data-i18n="workerNameLabel">Your Full Name:</label>
+            <input type="text" id="worker-name-input" class="form-control" required placeholder="e.g. Dr. Sunitha Rao or Kavitha (ASHA)">
+          </div>
+
+          <div class="form-group">
+            <label for="worker-hospital-input" data-i18n="hospitalNameLabel">Hospital / PHC Name:</label>
+            <input type="text" id="worker-hospital-input" class="form-control" required placeholder="e.g. Primary Health Centre - Rampur">
+          </div>
+
+          <div class="form-group">
+            <label for="worker-dept-input" data-i18n="deptLabel">Department / Role:</label>
+            <select id="worker-dept-input" class="form-control">
+              <option value="General Medicine">General Medicine</option>
+              <option value="Maternity & ANC / OBGYN">Maternity & ANC / OBGYN</option>
+              <option value="Emergency & Trauma">Emergency & Trauma</option>
+              <option value="Pediatrics & Child Health">Pediatrics & Child Health</option>
+              <option value="Diagnostics / Lab">Diagnostics / Lab</option>
+              <option value="ASHA / ANM Community Unit">ASHA / ANM Community Unit</option>
+              <option value="Pharmacy / Medical Store">Pharmacy / Medical Store</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="chikitsaApp.closeWorkerDetailsModal()" data-i18n="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" data-i18n="saveWorkerBtn">Confirm & Access Staff Dashboard</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== REGISTER PATIENT MODAL ==================== -->
+  <div id="modal-add-patient" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 data-i18n="registerPatient">Register New Patient</h3>
+        <button id="btn-close-add-patient" class="modal-close">&times;</button>
+      </div>
+      <form id="add-patient-form">
+        <div class="modal-body">
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="pat-name">Patient Full Name *</label>
+              <input type="text" id="pat-name" class="form-control" required placeholder="e.g. Balaram Naik">
+            </div>
+            <div class="form-group">
+              <label for="pat-age">Age (Years) *</label>
+              <input type="number" id="pat-age" class="form-control" required min="0" max="120" placeholder="e.g. 42">
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="pat-gender">Gender</label>
+              <select id="pat-gender" class="form-control">
+                <option value="Female">Female</option>
+                <option value="Male">Male</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="pat-mobile">Mobile Number *</label>
+              <input type="tel" id="pat-mobile" class="form-control" required placeholder="e.g. 9848012345">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="pat-village">Village / Mandal</label>
+            <input type="text" id="pat-village" class="form-control" placeholder="e.g. Kothapalli Sub-centre, Ward 2">
+          </div>
+
+          <div class="form-group">
+            <label for="pat-condition">Symptoms / Presenting Illness</label>
+            <input type="text" id="pat-condition" class="form-control" placeholder="e.g. High fever with chills for 3 days, body aches">
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="pat-bloodgroup">Blood Group</label>
+              <select id="pat-bloodgroup" class="form-control">
+                <option value="O+">O+</option>
+                <option value="A+">A+</option>
+                <option value="B+">B+</option>
+                <option value="AB+">AB+</option>
+                <option value="O-">O-</option>
+                <option value="A-">A-</option>
+                <option value="B-">B-</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="pat-triage">Initial Triage Severity</label>
+              <select id="pat-triage" class="form-control">
+                <option value="Green">Green (Routine / Mild)</option>
+                <option value="Yellow">Yellow (Urgent Care)</option>
+                <option value="Red">Red (Critical Emergency)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-add-patient').style.display='none'" data-i18n="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" data-i18n="submitBtn">Save & View In Records</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== PATIENT HEALTH CARD MODAL ==================== -->
+  <div id="modal-patient-card" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 650px;">
+      <div class="modal-body" id="patient-card-content">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div style="max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <strong>ChikitsaConnect</strong> - National Rural Tele-Medicine & Health System
+      </div>
+      <div>
+        Helpline: <strong>108 / 104</strong> | Emergency 24x7
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS -->
+  <script src="mock-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
