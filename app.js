@@ -18,8 +18,9 @@ const I18N = {
     navReferrals: "Referral Tracking",
     navDiagnostics: "Diagnostics",
     navHighRisk: "High-Risk Follow-up",
-    navFacility: "Facility Dashboard",
+    navFacility: "Facility & Doctors",
     navEmergency: "Emergency Escalation",
+    navDatabase: "Central Database",
     workerOnly: "Staff Only",
     aiAssistantTitle: "Chikitsa AI - Hospital Guide",
     aiHelpBtn: "Contact Hospital / AI Guide",
@@ -68,8 +69,9 @@ const I18N = {
     navReferrals: "రిఫరల్ ట్రాకింగ్",
     navDiagnostics: "పరీక్షలు & ల్యాబ్",
     navHighRisk: "అధిక ప్రమాద పర్యవేక్షణ",
-    navFacility: "సౌకర్యాల డాష్‌బోర్డ్",
+    navFacility: "సౌకర్యాలు & వైద్యులు",
     navEmergency: "అత్యవసర స్పందన",
+    navDatabase: "కేంద్ర డేటాబేస్",
     workerOnly: "సిబ్బందికి మాత్రమే",
     aiAssistantTitle: "చికిత్స AI - ఆసుపత్రి సహాయకుడు",
     aiHelpBtn: "ఆసుపత్రిని సంప్రదించండి / AI గైడ్",
@@ -118,8 +120,9 @@ const I18N = {
     navReferrals: "रेफरल ट्रैकिंग",
     navDiagnostics: "जांच और टेस्ट",
     navHighRisk: "उच्च जोखिम निगरानी",
-    navFacility: "सुविधा डैशबोर्ड",
+    navFacility: "सुविधा व डॉक्टर्स",
     navEmergency: "आपातकालीन सहायता",
+    navDatabase: "केंद्रीय डेटाबेस",
     workerOnly: "केवल स्टाफ",
     aiAssistantTitle: "चिकित्सा AI - अस्पताल गाइड",
     aiHelpBtn: "अस्पताल से संपर्क करें / AI गाइड",
@@ -163,10 +166,13 @@ class ChikitsaApp {
     this.lang = "en";
     this.role = null;
     this.workerInfo = {
-      name: "Dr. Sunitha Rao",
-      hospital: "PHC Rampur",
-      department: "General Medicine"
+      name: "",
+      hospital: "",
+      department: ""
     };
+
+    // Logged-in doctors registry (Doctor must log in for details & availability to be seen by patients)
+    this.loggedInDoctors = JSON.parse(localStorage.getItem("chikitsa_logged_in_doctors")) || [];
 
     // Load or initialize Data
     this.data = {
@@ -175,7 +181,8 @@ class ChikitsaApp {
       referrals: JSON.parse(localStorage.getItem("chikitsa_referrals")) || DEFAULT_MOCK_DATA.referrals,
       diagnostics: JSON.parse(localStorage.getItem("chikitsa_diagnostics")) || DEFAULT_MOCK_DATA.diagnostics,
       highRisk: JSON.parse(localStorage.getItem("chikitsa_highrisk")) || DEFAULT_MOCK_DATA.highRisk,
-      facility: JSON.parse(localStorage.getItem("chikitsa_facility")) || DEFAULT_MOCK_DATA.facility
+      facility: JSON.parse(localStorage.getItem("chikitsa_facility")) || DEFAULT_MOCK_DATA.facility,
+      database: JSON.parse(localStorage.getItem("chikitsa_central_database")) || DEFAULT_MOCK_DATA.database
     };
 
     this.activeTab = "queue";
@@ -187,7 +194,8 @@ class ChikitsaApp {
 
   saveData(key) {
     if (this.data[key]) {
-      localStorage.setItem(`chikitsa_${key}`, JSON.stringify(this.data[key]));
+      const storageKey = key === "database" ? "chikitsa_central_database" : `chikitsa_${key}`;
+      localStorage.setItem(storageKey, JSON.stringify(this.data[key]));
     }
   }
 
@@ -199,6 +207,7 @@ class ChikitsaApp {
     this.showLanguageModal();
 
     this.bindGlobalEvents();
+    this.bindPatientTriageAI();
     this.renderActiveTab();
     this.renderQueueBoard();
     this.renderPatientRecords();
@@ -206,6 +215,7 @@ class ChikitsaApp {
     this.renderDiagnostics();
     this.renderHighRisk();
     this.renderFacilityDashboard();
+    this.renderDatabaseTable();
     this.setupAIAssistant();
   }
 
@@ -245,6 +255,7 @@ class ChikitsaApp {
       this.renderDiagnostics();
       this.renderHighRisk();
       this.renderFacilityDashboard();
+      this.renderDatabaseTable();
       this.refreshAIChatGreeting();
     }
   }
@@ -258,24 +269,22 @@ class ChikitsaApp {
 
     this.applyRolePermissions();
     this.updateRoleBadgeUI();
-
-    // If patient is currently on facility dashboard, redirect to records or triage
-    if (this.role === "patient" && this.activeTab === "facility") {
-      this.switchTab("triage");
-    }
   }
 
   applyRolePermissions() {
     const facilityNavTab = document.getElementById("tab-nav-facility");
-    const facilityView = document.getElementById("view-facility");
+    const workerBedControls = document.getElementById("worker-bed-controls");
+    const patientBedNotice = document.getElementById("patient-bed-notice");
 
-    if (this.role === "patient") {
-      // Strictly hide Facility Dashboard from patient
-      if (facilityNavTab) facilityNavTab.style.display = "none";
-      if (facilityView) facilityView.classList.remove("active");
+    // Both patients and workers can access the Facility Dashboard to view department doctors
+    if (facilityNavTab) facilityNavTab.style.display = "inline-flex";
+
+    if (this.role === "worker") {
+      if (workerBedControls) workerBedControls.style.display = "block";
+      if (patientBedNotice) patientBedNotice.style.display = "none";
     } else {
-      // Worker mode: show Facility Dashboard
-      if (facilityNavTab) facilityNavTab.style.display = "inline-flex";
+      if (workerBedControls) workerBedControls.style.display = "none";
+      if (patientBedNotice) patientBedNotice.style.display = "block";
     }
   }
 
@@ -320,9 +329,20 @@ class ChikitsaApp {
   showWorkerDetailsModal() {
     const modal = document.getElementById("modal-worker-details");
     if (modal) {
-      document.getElementById("worker-name-input").value = this.workerInfo.name || "";
-      document.getElementById("worker-hospital-input").value = this.workerInfo.hospital || "PHC Rampur";
-      document.getElementById("worker-dept-input").value = this.workerInfo.department || "General Medicine";
+      const hospEl = document.getElementById("worker-hospital-input");
+      const nameEl = document.getElementById("worker-name-input");
+      const deptEl = document.getElementById("worker-dept-input");
+      const pinEl = document.getElementById("worker-pin-input");
+      const errBox = document.getElementById("worker-auth-error");
+
+      if (hospEl) hospEl.value = "";
+      if (nameEl) nameEl.value = "";
+      if (deptEl) deptEl.value = "";
+      if (pinEl) pinEl.value = "";
+      if (errBox) {
+        errBox.style.display = "none";
+        errBox.innerHTML = "";
+      }
       modal.style.display = "flex";
     }
   }
@@ -336,13 +356,6 @@ class ChikitsaApp {
   }
 
   switchTab(tabId) {
-    if (tabId === "facility" && this.role !== "worker") {
-      alert(this.lang === "te" ? "ఈ సౌకర్యాల డాష్‌బోర్డ్ కేవలం ఆసుపత్రి సిబ్బందికి మాత్రమే అందుబాటులో ఉంటుంది." : 
-            this.lang === "hi" ? "यह सुविधा डैशबोर्ड केवल अस्पताल कर्मचारियों के लिए उपलब्ध है।" : 
-            "This Facility Dashboard is strictly restricted to Hospital Staff.");
-      return;
-    }
-
     this.activeTab = tabId;
 
     // Update Nav buttons
@@ -416,23 +429,85 @@ class ChikitsaApp {
       });
     }
 
-    // Worker Form Submission
+    // Worker Form Submission with Strict Authentication Rules
     const workerForm = document.getElementById("worker-details-form");
     if (workerForm) {
       workerForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        const name = document.getElementById("worker-name-input").value.trim();
-        const hospital = document.getElementById("worker-hospital-input").value.trim();
-        const department = document.getElementById("worker-dept-input").value.trim();
+        const hospInput = document.getElementById("worker-hospital-input");
+        const nameInput = document.getElementById("worker-name-input");
+        const deptInput = document.getElementById("worker-dept-input");
+        const pinInput = document.getElementById("worker-pin-input");
+        const errBox = document.getElementById("worker-auth-error");
 
-        if (!name || !hospital) {
-          alert("Please fill name and hospital.");
+        const hospital = (hospInput ? hospInput.value : "").trim().toUpperCase();
+        const rawName = (nameInput ? nameInput.value : "").trim();
+        const nameUpper = rawName.toUpperCase();
+        const dept = (deptInput ? deptInput.value : "").trim().toUpperCase();
+        const pin = (pinInput ? pinInput.value : "").trim();
+
+        if (errBox) {
+          errBox.style.display = "none";
+          errBox.innerHTML = "";
+        }
+
+        // Strict Department Mapping as specified:
+        // KANISHQ -> NEUROLOGY
+        // LIKITH -> CARDIOLOGY
+        // HARISH -> ORTHOPAEDICS / ORTHOPAEDICES
+        // KAARTHIKEYA -> PAEDIATRICS
+        // AADHYA -> GYNAECOLOGY
+        // KEERTHI -> ONCOLOGY
+        const VALID_STAFF_MAP = {
+          "KANISHQ": ["NEUROLOGY"],
+          "LIKITH": ["CARDIOLOGY"],
+          "HARISH": ["ORTHOPAEDICS", "ORTHOPAEDICES"],
+          "KAARTHIKEYA": ["PAEDIATRICS"],
+          "AADHYA": ["GYNAECOLOGY"],
+          "KEERTHI": ["ONCOLOGY"]
+        };
+
+        const allowedDepts = VALID_STAFF_MAP[nameUpper];
+        const isHospitalValid = hospital === "ABCD HOSPITAL";
+        const isPinValid = pin === "2026";
+        const isStaffValid = !!allowedDepts;
+        const isDeptValid = isStaffValid && allowedDepts.includes(dept);
+
+        // Secure verification without leaking names, departments, or PIN
+        if (!isHospitalValid || !isPinValid || !isStaffValid || !isDeptValid) {
+          if (errBox) {
+            errBox.innerHTML = `⚠️ <strong>Authentication Failed:</strong> Invalid credentials. Please verify your hospital name, staff doctor name, assigned department, and 4-digit security PIN.`;
+            errBox.style.display = "block";
+          }
           return;
         }
 
-        this.setRole("worker", { name, hospital, department });
+        // Authentication Successful!
+        const capitalizedName = "Dr. " + nameUpper.charAt(0) + nameUpper.slice(1).toLowerCase();
+        this.setRole("worker", {
+          name: capitalizedName,
+          hospital: "ABCD HOSPITAL",
+          department: dept
+        });
+
+        // Mark this doctor as logged in so patient can see they are available!
+        this.markDoctorLoggedIn(nameUpper, dept);
+
+        // Log to Central Database
+        this.logToDatabase(
+          "WORKER_AUTH",
+          `${capitalizedName} (Staff)`,
+          `Healthcare Worker verified and signed in at ABCD HOSPITAL (Dept: ${dept})`,
+          {
+            hospital: "ABCD HOSPITAL",
+            staff: nameUpper,
+            department: dept,
+            verifiedAt: new Date().toLocaleString()
+          }
+        );
+
         this.closeWorkerDetailsModal();
-        // Give staff immediate view of Facility Dashboard
+        // Give staff immediate view of ABCD HOSPITAL Facility Dashboard
         this.switchTab("facility");
       });
     }
@@ -575,6 +650,15 @@ class ChikitsaApp {
           return;
         }
         alert(this.lang === 'te' ? "ఈ-ప్రిస్క్రిప్షన్ సేవ్ చేయబడింది & రోగి రికార్డుకు జోడించబడింది!" : "E-Prescription saved and attached to patient health card!");
+        
+        // Log to Central Database
+        this.logToDatabase(
+          "TELE_PRESCRIPTION",
+          this.role === "worker" ? `${this.workerInfo.name || 'Doctor'} (${this.workerInfo.department || 'Consultation'})` : "Dr. Sunitha Rao (MO)",
+          `E-Prescription generated for Token OPD-014: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
+          { token: "OPD-014", prescription: text, recordedAt: new Date().toLocaleString() }
+        );
+
         docNoteInput.value = "";
       });
     }
@@ -639,6 +723,14 @@ class ChikitsaApp {
     localStorage.setItem("chikitsa_my_token", newTokenId);
     this.saveData("queue");
     this.renderQueueBoard();
+
+    // Log to Central Database
+    this.logToDatabase(
+      "QUEUE_TOKEN",
+      "OPD Token Kiosk",
+      `New OPD Token generated: ${newTokenId} for "${patientName}" (Wait: ~${wait}m, Room: Room 1)`,
+      newEntry
+    );
 
     const successMsg = this.lang === 'te' ? 
       `మీ టోకెన్ ${newTokenId} విజయవంతంగా జనరేట్ అయ్యింది! సుమారు నిరీక్షణ సమయం: ${wait} నిమిషాలు.` : 
@@ -714,6 +806,20 @@ class ChikitsaApp {
           btnAction.className = "btn btn-secondary btn-lg";
           btnAction.onclick = () => { this.switchTab("telecon"); };
         }
+
+        // Log to Central Database
+        this.logToDatabase(
+          "TRIAGE_CHECK",
+          "Digital Triage Kiosk",
+          `Symptom evaluation for "${symptom}": Result ${severity.toUpperCase()} (${scoreTitle.textContent})`,
+          {
+            symptom: symptom,
+            severity: severity,
+            guidance: scoreDesc.textContent,
+            action: scoreTitle.textContent,
+            evaluatedAt: new Date().toLocaleString()
+          }
+        );
       });
     });
   }
@@ -829,6 +935,27 @@ class ChikitsaApp {
     this.userToken = newTokenId;
     localStorage.setItem("chikitsa_my_token", newTokenId);
     this.saveData("queue");
+
+    // Log to Central Database
+    this.logToDatabase(
+      "PATIENT_REGISTRATION",
+      this.role === "worker" ? `${this.workerInfo.name || 'Staff'} (${this.workerInfo.department || 'Registration'})` : "OPD Registration Desk",
+      `New Patient Registered: "${name}" (${nextId}, ${age}y, ${gender}, ${village || 'Rural'}) with Auto Token ${newTokenId} (Dept: ${assignedDept}, ${assignedRoom})`,
+      {
+        patientId: nextId,
+        name: name,
+        age: age,
+        gender: gender,
+        mobile: mobile,
+        village: village,
+        token: newTokenId,
+        department: assignedDept,
+        doctor: assignedDoc,
+        room: assignedRoom,
+        triageStatus: triageStatus,
+        registeredAt: newPat.registeredAt
+      }
+    );
 
     // Re-render records and queue immediately
     this.renderPatientRecords();
@@ -981,7 +1108,7 @@ class ChikitsaApp {
     });
   }
 
-  // MODULE 8: FACILITY DASHBOARD (WORKER ONLY)
+  // MODULE 8: FACILITY DASHBOARD & DOCTORS DIRECTORY (ABCD HOSPITAL)
   renderFacilityDashboard() {
     const fac = this.data.facility;
     const totBedsEl = document.getElementById("fac-total-beds");
@@ -991,12 +1118,40 @@ class ChikitsaApp {
     const oxyEl = document.getElementById("fac-oxy-cylinders");
     const medsListEl = document.getElementById("fac-meds-list");
     const staffListEl = document.getElementById("fac-staff-list");
+    const doctorsGridEl = document.getElementById("facility-dept-doctors-grid");
 
     if (totBedsEl) totBedsEl.textContent = fac.totalBeds;
     if (occBedsEl) occBedsEl.textContent = fac.occupiedBeds;
     if (vacBedsEl) vacBedsEl.textContent = fac.vacantBeds;
     if (icuBedsEl) icuBedsEl.textContent = `${fac.icuEmergencyBeds.vacant} / ${fac.icuEmergencyBeds.total}`;
     if (oxyEl) oxyEl.textContent = `${fac.oxygenCylinders.full} / ${fac.oxygenCylinders.total}`;
+
+    // Render Department Doctors Grid for Patients & Workers
+    if (doctorsGridEl && fac.departments) {
+      doctorsGridEl.innerHTML = "";
+      fac.departments.forEach(dept => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.border = "1px solid #e2e8f0";
+        card.style.borderTop = "4px solid #0284c7";
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+            <span style="font-size: 2.2rem;">${dept.icon || '👨‍⚕️'}</span>
+            <span class="badge badge-green">${dept.status || 'Available Today'}</span>
+          </div>
+          <h4 style="margin:0 0 2px 0; color:#0369a1; font-size:1.1rem;">${dept.name}</h4>
+          <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
+          <p style="margin:0; font-weight:700; font-size:1.05rem; color:#1e293b;">${dept.doctorName}</p>
+          <p style="margin:0 0 8px 0; font-size:0.85rem; color:#64748b;">${dept.qualification}</p>
+          <div style="background:#f8fafc; padding:8px 10px; border-radius:6px; font-size:0.85rem; margin-top:8px; border:1px solid #e2e8f0;">
+            <div>📍 <strong>OPD Room:</strong> ${dept.room}</div>
+            <div>⏱️ <strong>Timings:</strong> ${dept.timings}</div>
+            <div>👥 <strong>Active OPD Cases:</strong> ${dept.activeCases || 12}</div>
+          </div>
+        `;
+        doctorsGridEl.appendChild(card);
+      });
+    }
 
     if (medsListEl) {
       medsListEl.innerHTML = "";
@@ -1024,7 +1179,7 @@ class ChikitsaApp {
         li.style.padding = "8px 0";
         li.style.borderBottom = "1px solid #f1f5f9";
         li.innerHTML = `
-          <div><strong>${s.role}:</strong> ${s.name} <br><small style="color:#64748b;">${s.shift}</small></div>
+          <div><strong>${s.role}:</strong> ${s.name} <br><small style="color:#64748b;">${s.dept || ''} - ${s.shift} Shift</small></div>
           <div>📞 <a href="tel:${s.phone}" style="color:var(--primary); font-weight:700;">${s.phone}</a></div>
         `;
         staffListEl.appendChild(li);
@@ -1040,6 +1195,107 @@ class ChikitsaApp {
     this.data.facility.vacantBeds = this.data.facility.totalBeds - this.data.facility.occupiedBeds;
     this.saveData("facility");
     this.renderFacilityDashboard();
+
+    // Log to Central Database
+    this.logToDatabase(
+      "BED_UPDATE",
+      this.role === "worker" ? `${this.workerInfo.name || 'Staff'} (${this.workerInfo.department || 'Ward'})` : "Hospital Administration",
+      `Bed Occupancy modified by ${change > 0 ? '+1 (Admit)' : '-1 (Discharge)'}. Current Occupancy: ${this.data.facility.occupiedBeds} / ${this.data.facility.totalBeds} Beds`,
+      {
+        totalBeds: this.data.facility.totalBeds,
+        occupiedBeds: this.data.facility.occupiedBeds,
+        vacantBeds: this.data.facility.vacantBeds,
+        change: change,
+        timestamp: new Date().toLocaleString()
+      }
+    );
+  }
+
+  // MODULE 10: CENTRAL DATABASE LOGGING & AUDIT REPOSITORY
+  logToDatabase(type, actor, summary, payload = {}) {
+    if (!this.data.database) {
+      this.data.database = [];
+    }
+    const logId = `LOG-${1000 + this.data.database.length + 1}`;
+    const timestamp = new Date().toLocaleString();
+    const entry = {
+      id: logId,
+      timestamp: timestamp,
+      type: type,
+      actor: actor,
+      summary: summary,
+      payload: payload
+    };
+    this.data.database.unshift(entry);
+    this.saveData("database");
+    this.renderDatabaseTable();
+  }
+
+  renderDatabaseTable() {
+    const listEl = document.getElementById("database-records-list");
+    const countEl = document.getElementById("db-total-count");
+    if (!listEl) return;
+
+    const filterCategory = document.getElementById("db-filter-category")?.value || "ALL";
+    const searchTerm = (document.getElementById("db-search-input")?.value || "").toLowerCase().trim();
+
+    if (!this.data.database) {
+      this.data.database = (typeof DEFAULT_MOCK_DATA !== 'undefined' && DEFAULT_MOCK_DATA.database) ? DEFAULT_MOCK_DATA.database : [];
+    }
+
+    const filtered = this.data.database.filter(item => {
+      const matchCategory = filterCategory === "ALL" || item.type === filterCategory;
+      const jsonStr = JSON.stringify(item).toLowerCase();
+      const matchSearch = !searchTerm || jsonStr.includes(searchTerm);
+      return matchCategory && matchSearch;
+    });
+
+    if (countEl) {
+      countEl.textContent = this.data.database.length;
+    }
+
+    listEl.innerHTML = "";
+    if (filtered.length === 0) {
+      listEl.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">No database records match your search criteria.</td></tr>`;
+      return;
+    }
+
+    filtered.forEach(log => {
+      const tr = document.createElement("tr");
+      const badgeClass = log.type === "WORKER_AUTH" ? "badge-blue" :
+                         log.type === "PATIENT_REGISTRATION" ? "badge-green" :
+                         log.type === "QUEUE_TOKEN" ? "badge-yellow" :
+                         log.type === "TRIAGE_CHECK" ? "badge-red" : "badge-blue";
+
+      tr.innerHTML = `
+        <td><strong style="color:var(--primary);">${log.id}</strong></td>
+        <td><small style="color:#64748b;">${log.timestamp}</small></td>
+        <td><span class="badge ${badgeClass}">${log.type}</span></td>
+        <td><strong>${log.actor}</strong></td>
+        <td>
+          <div style="font-size:0.9rem; margin-bottom:4px;">${log.summary}</div>
+          <details style="cursor:pointer; font-size:0.75rem; color:#64748b;">
+            <summary>View Log Payload Data</summary>
+            <pre style="background:#f1f5f9; padding:6px; border-radius:4px; margin-top:4px; overflow-x:auto;">${JSON.stringify(log.payload, null, 2)}</pre>
+          </details>
+        </td>
+      `;
+      listEl.appendChild(tr);
+    });
+  }
+
+  exportDatabaseJSON() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data.database, null, 2));
+    const dlAnchor = document.createElement("a");
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `chikitsa_central_database_${Date.now()}.json`);
+    dlAnchor.click();
+  }
+
+  copyDatabaseJSON() {
+    navigator.clipboard.writeText(JSON.stringify(this.data.database, null, 2))
+      .then(() => alert("✅ Complete Central Database JSON copied to clipboard!"))
+      .catch(() => alert("Failed to copy JSON."));
   }
 
   // BUTTON-DRIVEN AI HOSPITAL ASSISTANT

@@ -65,13 +65,16 @@
       <button class="tab-btn" data-tab="highrisk">
         <span>⚠️</span> <span data-i18n="navHighRisk">High-Risk Follow-up</span>
       </button>
-      <!-- Facility Dashboard: Strictly visible for Hospital Workers only -->
-      <button class="tab-btn" id="tab-nav-facility" data-tab="facility" style="display: none;">
-        <span>🏢</span> <span data-i18n="navFacility">Facility Dashboard</span>
-        <span class="worker-only-tag" data-i18n="workerOnly">Staff Only</span>
+      <!-- Facility Dashboard: Accessible to Patients (View Doctors & Capacity) and Workers (Full Admin) -->
+      <button class="tab-btn" id="tab-nav-facility" data-tab="facility">
+        <span>🏢</span> <span data-i18n="navFacility">Facility & Doctors</span>
       </button>
       <button class="tab-btn" data-tab="emergency">
         <span>🚨</span> <span data-i18n="navEmergency">Emergency Escalation</span>
+      </button>
+      <!-- Central Database: Stores every single input entered -->
+      <button class="tab-btn" data-tab="database">
+        <span>💾</span> <span data-i18n="navDatabase">Central Database</span>
       </button>
     </div>
   </nav>
@@ -500,27 +503,46 @@
       </div>
     </section>
 
-    <!-- ==================== MODULE 8: FACILITY DASHBOARD (WORKER ONLY) ==================== -->
+    <!-- ==================== MODULE 8: FACILITY DASHBOARD & DOCTORS DIRECTORY ==================== -->
     <section id="view-facility" class="module-view">
       <div class="section-header">
         <div class="section-title">
-          <h2><span>🏢</span> <span data-i18n="navFacility">Facility Dashboard</span> <span class="badge badge-yellow">Staff Restricted</span></h2>
-          <p>Live health facility bed capacity, medical oxygen inventory, essential drugs, and duty roster.</p>
+          <h2><span>🏢</span> <span data-i18n="navFacility">ABCD HOSPITAL - Facility & Department Doctors</span></h2>
+          <p>Verified hospital bed capacity, medical oxygen supplies, and department specialist doctors directory.</p>
         </div>
         <div>
-          <span style="font-size: 0.9rem; color: #0f766e; font-weight: 700; background: var(--primary-light); padding: 8px 14px; border-radius: 20px;">
-            🏥 Primary Health Centre - Rampur
+          <span style="font-size: 0.95rem; color: #0f766e; font-weight: 800; background: var(--primary-light); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(13,148,136,0.3);">
+            🏥 ABCD HOSPITAL
           </span>
         </div>
       </div>
 
-      <!-- Real-Time Bed Metrics -->
+      <!-- Department Doctors Directory (Accessible to Patients & Workers) -->
+      <div class="card" style="margin-bottom: 24px; border-left: 6px solid #0284c7;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="color: #0369a1; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+              <span>👨‍⚕️</span> <span>Department Doctors Directory (ABCD HOSPITAL)</span>
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Patients can view which department doctors have signed in and are currently available for consultation.
+            </p>
+          </div>
+          <span id="facility-active-count-badge" class="badge badge-yellow" style="font-size: 0.85rem;">● Awaiting Doctor Sign-In</span>
+        </div>
+
+        <div class="grid-3" id="facility-dept-doctors-grid">
+          <!-- Dynamically populated from facility.departments -->
+        </div>
+      </div>
+
+      <!-- Real-Time Bed Metrics (Viewable by Patients & Workers) -->
       <div class="grid-4" style="margin-bottom: 24px;">
         <div class="stat-card">
           <div class="stat-icon">🛏️</div>
           <div class="stat-info">
             <h4>Total Beds</h4>
-            <div id="fac-total-beds" class="stat-value">24</div>
+            <div id="fac-total-beds" class="stat-value">50</div>
           </div>
         </div>
 
@@ -528,7 +550,7 @@
           <div class="stat-icon" style="background: var(--danger-light); color: var(--danger);">🛌</div>
           <div class="stat-info">
             <h4>Occupied Beds</h4>
-            <div id="fac-occ-beds" class="stat-value" style="color: var(--danger);">16</div>
+            <div id="fac-occ-beds" class="stat-value" style="color: var(--danger);">34</div>
           </div>
         </div>
 
@@ -536,7 +558,7 @@
           <div class="stat-icon" style="background: var(--success-light); color: var(--success);">✅</div>
           <div class="stat-info">
             <h4>Vacant Beds</h4>
-            <div id="fac-vac-beds" class="stat-value" style="color: var(--success);">8</div>
+            <div id="fac-vac-beds" class="stat-value" style="color: var(--success);">16</div>
           </div>
         </div>
 
@@ -544,41 +566,50 @@
           <div class="stat-icon" style="background: var(--accent-light); color: var(--warning);">🚨</div>
           <div class="stat-info">
             <h4>ICU / Trauma Vacant</h4>
-            <div id="fac-icu-beds" class="stat-value">1 / 4</div>
+            <div id="fac-icu-beds" class="stat-value">3 / 10</div>
           </div>
         </div>
       </div>
 
-      <!-- Worker Bed Control & Inventory -->
+      <!-- Facility Management & Inventory Controls -->
       <div class="grid-2" style="margin-bottom: 24px;">
         <div class="card">
-          <h3 style="margin-bottom: 14px;">Update Bed Occupancy (Live)</h3>
-          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
-            Quickly admit or discharge patients to keep district command center updated.
-          </p>
-          <div style="display: flex; gap: 14px;">
-            <button class="btn btn-danger" onclick="chikitsaApp.updateBedOccupancy(1)">
-              ➕ Admit Patient (+1 Occupied)
-            </button>
-            <button class="btn btn-success" onclick="chikitsaApp.updateBedOccupancy(-1)">
-              ➖ Discharge Patient (-1 Occupied)
-            </button>
+          <h3 style="margin-bottom: 14px;">Live Bed Management</h3>
+          
+          <!-- Worker Only Controls -->
+          <div id="worker-bed-controls" style="display: none;">
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+              Worker Access: Adjust live bed occupancy for ABCD HOSPITAL. Every update logs to the Central Database.
+            </p>
+            <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+              <button class="btn btn-danger" onclick="chikitsaApp.updateBedOccupancy(1)">
+                ➕ Admit Patient (+1 Occupied)
+              </button>
+              <button class="btn btn-success" onclick="chikitsaApp.updateBedOccupancy(-1)">
+                ➖ Discharge Patient (-1 Occupied)
+              </button>
+            </div>
+          </div>
+
+          <!-- Patient View Notice -->
+          <div id="patient-bed-notice" style="display: block; background: #f0fdf4; border: 1px solid #86efac; padding: 12px; border-radius: 8px; font-size: 0.9rem; color: #166534;">
+            ℹ️ <strong>Patient View:</strong> You have real-time visibility into bed and ICU availability at ABCD HOSPITAL. Admissions are handled by on-duty medical staff.
           </div>
 
           <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;">
 
-          <h4>Oxygen Supply:</h4>
+          <h4>Medical Oxygen Supply:</h4>
           <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
             <span style="font-size: 28px;">🫁</span>
             <div>
-              <strong id="fac-oxy-cylinders">11 / 14 Full Cylinders</strong>
-              <div style="font-size: 0.85rem; color: #16a34a;">Adequate for 72 hours emergency supply</div>
+              <strong id="fac-oxy-cylinders">24 / 30 Full Cylinders</strong>
+              <div style="font-size: 0.85rem; color: #16a34a;">Adequate for 96 hours continuous emergency care</div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom: 14px;">Essential Medicine Inventory</h3>
+          <h3 style="margin-bottom: 14px;">Essential Medicine Inventory (ABCD HOSPITAL)</h3>
           <ul id="fac-meds-list" style="list-style: none;">
             <!-- Dynamically populated -->
           </ul>
@@ -587,7 +618,7 @@
 
       <!-- Staff On Duty -->
       <div class="card">
-        <h3 style="margin-bottom: 14px;">Staff On Duty Roster (Today)</h3>
+        <h3 style="margin-bottom: 14px;">Specialist Medical Officers On-Duty Roster</h3>
         <ul id="fac-staff-list" style="list-style: none;">
           <!-- Dynamically populated -->
         </ul>
@@ -643,6 +674,65 @@
           <p style="color: var(--text-muted); font-size: 0.9rem;">All-India Emergency</p>
           <a href="tel:112" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">Call 112</a>
         </div>
+      </div>
+    </section>
+
+    <!-- ==================== MODULE 10: CENTRAL DATABASE REPOSITORY ==================== -->
+    <section id="view-database" class="module-view">
+      <div class="section-header" style="border-left-color: #6366f1;">
+        <div class="section-title">
+          <h2><span>💾</span> <span data-i18n="navDatabase">Central Database & Activity Repository</span></h2>
+          <p>Every single input entered across all modules is timestamped and saved in this centralized database.</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="chikitsaApp.exportDatabaseJSON()">
+            📥 Download Database (JSON)
+          </button>
+          <button class="btn btn-secondary" onclick="chikitsaApp.copyDatabaseJSON()">
+            📋 Copy JSON Data
+          </button>
+        </div>
+      </div>
+
+      <!-- Database Statistics & Search Filter -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <span style="font-weight: 700; color: var(--text-muted);">Total Stored Records:</span>
+            <span id="db-total-count" class="badge badge-blue" style="font-size: 1rem;">0</span>
+          </div>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; max-width: 650px;">
+            <select id="db-filter-category" class="form-control" style="width: auto; max-width: 220px;" onchange="chikitsaApp.renderDatabaseTable()">
+              <option value="ALL">All Categories (All Inputs)</option>
+              <option value="PATIENT_REGISTRATION">Patient Registrations</option>
+              <option value="QUEUE_TOKEN">Queue Tokens</option>
+              <option value="TRIAGE_CHECK">Triage Evaluations</option>
+              <option value="WORKER_AUTH">Staff Verifications</option>
+              <option value="TELE_PRESCRIPTION">Prescriptions</option>
+              <option value="BED_UPDATE">Bed Capacity Changes</option>
+            </select>
+            <input type="text" id="db-search-input" class="form-control" placeholder="Search any patient, token, doctor, or keyword..." oninput="chikitsaApp.renderDatabaseTable()" style="flex: 1;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Database Audit Table -->
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Log ID</th>
+              <th>Timestamp</th>
+              <th>Input Category</th>
+              <th>Actor / Submitter</th>
+              <th>Recorded Summary & Payload</th>
+            </tr>
+          </thead>
+          <tbody id="database-records-list">
+            <!-- Dynamically populated from central database in app.js -->
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -742,35 +832,43 @@
       <form id="worker-details-form">
         <div class="modal-body">
           <p style="color: #475569; margin-bottom: 16px; font-size: 0.9rem;">
-            Hospital workers gain administrative access to the Facility Dashboard, Bed Management, and Emergency Escalations.
+            Please enter your official hospital credentials and security PIN to verify administrative access.
           </p>
 
           <div class="form-group">
-            <label for="worker-name-input" data-i18n="workerNameLabel">Your Full Name:</label>
-            <input type="text" id="worker-name-input" class="form-control" required placeholder="e.g. Dr. Sunitha Rao or Kavitha (ASHA)">
+            <label for="worker-hospital-input">Hospital Name: *</label>
+            <input type="text" id="worker-hospital-input" class="form-control" required placeholder="Enter Hospital Name">
           </div>
 
           <div class="form-group">
-            <label for="worker-hospital-input" data-i18n="hospitalNameLabel">Hospital / PHC Name:</label>
-            <input type="text" id="worker-hospital-input" class="form-control" required placeholder="e.g. Primary Health Centre - Rampur">
+            <label for="worker-name-input">Staff / Doctor Name: *</label>
+            <input type="text" id="worker-name-input" class="form-control" required placeholder="Enter Staff / Doctor Full Name">
           </div>
 
           <div class="form-group">
-            <label for="worker-dept-input" data-i18n="deptLabel">Department / Role:</label>
-            <select id="worker-dept-input" class="form-control">
-              <option value="General Medicine">General Medicine</option>
-              <option value="Maternity & ANC / OBGYN">Maternity & ANC / OBGYN</option>
-              <option value="Emergency & Trauma">Emergency & Trauma</option>
-              <option value="Pediatrics & Child Health">Pediatrics & Child Health</option>
-              <option value="Diagnostics / Lab">Diagnostics / Lab</option>
-              <option value="ASHA / ANM Community Unit">ASHA / ANM Community Unit</option>
-              <option value="Pharmacy / Medical Store">Pharmacy / Medical Store</option>
+            <label for="worker-dept-input">Department: *</label>
+            <select id="worker-dept-input" class="form-control" required>
+              <option value="">-- Select Assigned Department --</option>
+              <option value="NEUROLOGY">NEUROLOGY</option>
+              <option value="CARDIOLOGY">CARDIOLOGY</option>
+              <option value="ORTHOPAEDICS">ORTHOPAEDICS</option>
+              <option value="PAEDIATRICS">PAEDIATRICS</option>
+              <option value="GYNAECOLOGY">GYNAECOLOGY</option>
+              <option value="ONCOLOGY">ONCOLOGY</option>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label for="worker-pin-input">Security PIN Code: *</label>
+            <input type="password" id="worker-pin-input" class="form-control" required maxlength="4" placeholder="Enter 4-Digit Security PIN">
+          </div>
+
+          <div id="worker-auth-error" style="display: none; background: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px;">
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="chikitsaApp.closeWorkerDetailsModal()" data-i18n="cancelBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary" data-i18n="saveWorkerBtn">Confirm & Access Staff Dashboard</button>
+          <button type="submit" class="btn btn-primary" data-i18n="saveWorkerBtn">Verify & Access Dashboard</button>
         </div>
       </form>
     </div>
@@ -817,8 +915,8 @@
           </div>
 
           <div class="form-group">
-            <label for="pat-condition">Symptoms / Presenting Illness</label>
-            <input type="text" id="pat-condition" class="form-control" placeholder="e.g. High fever with chills for 3 days, body aches">
+            <label for="pat-condition">Symptoms / Reason for Appointment *</label>
+            <textarea id="pat-condition" class="form-control" rows="2" required placeholder="Describe symptoms or reason for visit (e.g. Chest pain with sweating, OR High fever for 3 days, OR Routine blood pressure checkup)..."></textarea>
           </div>
 
           <div class="grid-2">
@@ -836,14 +934,24 @@
               </select>
             </div>
 
+            <!-- AI Automated Triage Classification -->
             <div class="form-group">
-              <label for="pat-triage">Initial Triage Severity</label>
-              <select id="pat-triage" class="form-control">
-                <option value="Green">Green (Routine / Mild)</option>
-                <option value="Yellow">Yellow (Urgent Care)</option>
-                <option value="Red">Red (Critical Emergency)</option>
-              </select>
+              <label>🤖 AI Determined Triage:</label>
+              <div style="padding-top: 4px;">
+                <span id="ai-live-triage-badge" class="badge badge-green" style="font-size: 0.95rem; padding: 6px 14px;">🟢 Routine (Green)</span>
+              </div>
             </div>
+          </div>
+
+          <!-- AI Clinical Reasoning Card -->
+          <div id="ai-triage-assessment-card" style="background: #f0fdfa; border: 1px solid #0d9488; border-radius: 8px; padding: 12px; margin-top: 6px;">
+            <strong style="color: #0f766e; font-size: 0.85rem; display: block; margin-bottom: 2px;">
+              🤖 Chikitsa AI Real-time Triage Engine:
+            </strong>
+            <p id="ai-live-triage-rationale" style="margin: 0; font-size: 0.82rem; color: #334155;">
+              Type symptoms or appointment reason above. The AI will automatically evaluate clinical severity (Green, Yellow, or Red Alert) and assign the optimal OPD consultation room.
+            </p>
+            <input type="hidden" id="pat-triage-hidden" value="Green">
           </div>
         </div>
         <div class="modal-footer">
