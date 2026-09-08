@@ -51,6 +51,7 @@ const I18N = {
     triageScoreEmergency: "EMERGENCY (Red) - Immediate Hospitalization / 108",
     closeBtn: "Close",
     submitBtn: "Submit",
+    confirmAndSubmit: "Confirm and Submit",
     cancelBtn: "Cancel",
     saveSuccess: "Saved successfully!"
   },
@@ -102,6 +103,7 @@ const I18N = {
     triageScoreEmergency: "అత్యవసరం (ఎరుపు) - వెంటనే ఆసుపత్రికి వెళ్లాలి / 108",
     closeBtn: "మూసివేయి",
     submitBtn: "సమర్పించు",
+    confirmAndSubmit: "ధృవీకరించి సమర్పించండి (Confirm and Submit)",
     cancelBtn: "రద్దు",
     saveSuccess: "విజయవంతంగా భద్రపరచబడింది!"
   },
@@ -153,6 +155,7 @@ const I18N = {
     triageScoreEmergency: "आपातकालीन (लाल) - तुरंत अस्पताल जाएं / 108 बुलाएं",
     closeBtn: "बंद करें",
     submitBtn: "जमा करें",
+    confirmAndSubmit: "पुष्टि करें और जमा करें (Confirm and Submit)",
     cancelBtn: "रद्द करें",
     saveSuccess: "सफलतापूर्वक सहेजा गया!"
   }
@@ -883,21 +886,23 @@ class ChikitsaApp {
     const village = document.getElementById("pat-village").value.trim();
     const condition = document.getElementById("pat-condition").value.trim();
     const bloodGroup = document.getElementById("pat-bloodgroup").value;
-    const triageStatus = document.getElementById("pat-triage").value;
 
     if (!name || !age || !mobile) {
       alert("Please fill required fields (Name, Age, Mobile).");
       return;
     }
 
+    // AI-Driven Automated Triage from presenting symptoms / reason
+    const aiAssessment = this.evaluateReasonTriage(condition);
+    const triageStatus = aiAssessment.level;
+    const assignedDept = aiAssessment.department;
+    const assignedDoc = aiAssessment.doctor;
+    const assignedRoom = aiAssessment.room;
+
     // Calculate automatic Token and Queue assignment
     const nextQueueNum = this.data.queue.length + 15;
     const newTokenId = `OPD-0${nextQueueNum}`;
-    const waitMins = Math.max(5, (this.data.queue.length - 1) * 7);
-    const assignedDept = triageStatus === "Red" ? "Emergency & Trauma" : 
-                         triageStatus === "Yellow" ? "Acute Care Clinic" : "General OPD";
-    const assignedDoc = triageStatus === "Red" ? "Dr. K. Srinivas (Emergency MO)" : "Dr. Sunitha Rao (MO)";
-    const assignedRoom = triageStatus === "Red" ? "Trauma Room" : "Room 1";
+    const waitMins = triageStatus === "Red" ? 0 : Math.max(5, (this.data.queue.length - 1) * 7);
 
     const nextId = `PAT-${1000 + this.data.patients.length + 1}`;
     const newPat = {
@@ -983,6 +988,120 @@ class ChikitsaApp {
 
     // Switch to records tab so user directly sees the updated record and token
     this.switchTab("records");
+  }
+
+  // AI-DRIVEN CLINICAL TRIAGE ENGINE
+  evaluateReasonTriage(conditionText) {
+    const text = (conditionText || "").toLowerCase();
+
+    // Red Keywords: Critical Emergency & Resuscitation
+    const redKeywords = [
+      "chest pain", "heart attack", "cardiac", "stroke", "paralysis", "unconscious",
+      "breathing", "breathlessness", "dyspnea", "asthma attack", "severe bleeding", 
+      "hemorrhage", "haemoptysis", "snake bite", "snakebite", "poison", "poisoning",
+      "seizure", "convulsion", "fits", "head injury", "trauma", "labor pain", "labour",
+      "eclampsia", "cyanosis", "shock", "choking", "severe accident", "collapse"
+    ];
+
+    // Yellow Keywords: Urgent Doctor Review
+    const yellowKeywords = [
+      "high fever", "fever", "malaria", "dengue", "typhoid", "vomiting", "diarrhea",
+      "loose motion", "dehydration", "fracture", "severe pain", "abdominal pain",
+      "stomach pain", "appendix", "hypertension", "high bp", "diabetes", "high sugar",
+      "pregnancy", "swelling", "infection", "wound", "burn", "urinary infection", "stones",
+      "joint pain", "jaundice", "skin rash"
+    ];
+
+    for (const kw of redKeywords) {
+      if (text.includes(kw)) {
+        return {
+          level: "Red",
+          badgeText: "🔴 Critical Emergency (Red)",
+          badgeClass: "badge-red",
+          rationale: `AI Detection: Critical presentation detected ("${kw}"). Immediate trauma/emergency intervention required.`,
+          department: "Emergency & Trauma",
+          doctor: "Dr. K. Srinivas (Emergency MO)",
+          room: "Trauma Room"
+        };
+      }
+    }
+
+    for (const kw of yellowKeywords) {
+      if (text.includes(kw)) {
+        return {
+          level: "Yellow",
+          badgeText: "🟡 Urgent Doctor Review (Yellow)",
+          badgeClass: "badge-yellow",
+          rationale: `AI Detection: Acute condition detected ("${kw}"). Requires clinical examination at OPD within 24 hours.`,
+          department: "Acute Care Clinic",
+          doctor: "Dr. Sunitha Rao (MO)",
+          room: "Room 1"
+        };
+      }
+    }
+
+    return {
+      level: "Green",
+      badgeText: "🟢 Routine / Mild (Green)",
+      badgeClass: "badge-green",
+      rationale: "AI Detection: Standard outpatient consultation. Routine checkup and primary care management.",
+      department: "General OPD",
+      doctor: "Dr. Sunitha Rao (MO)",
+      room: "Room 1"
+    };
+  }
+
+  bindPatientTriageAI() {
+    const conditionInput = document.getElementById("pat-condition");
+    const badgeEl = document.getElementById("ai-live-triage-badge");
+    const rationaleEl = document.getElementById("ai-live-triage-rationale");
+    const hiddenInput = document.getElementById("pat-triage-hidden");
+
+    if (!conditionInput) return;
+
+    const updateLiveTriage = () => {
+      const assessment = this.evaluateReasonTriage(conditionInput.value);
+      if (badgeEl) {
+        badgeEl.className = `badge ${assessment.badgeClass}`;
+        badgeEl.textContent = assessment.badgeText;
+      }
+      if (rationaleEl) {
+        rationaleEl.innerHTML = `<strong>${assessment.level.toUpperCase()} Priority:</strong> ${assessment.rationale} &bull; <em>Auto-assigned: ${assessment.department} (${assessment.room})</em>`;
+      }
+      if (hiddenInput) {
+        hiddenInput.value = assessment.level;
+      }
+    };
+
+    conditionInput.addEventListener("input", updateLiveTriage);
+    conditionInput.addEventListener("change", updateLiveTriage);
+  }
+
+  // DOCTOR AVAILABILITY & SIGN-IN MANAGEMENT
+  isDoctorLoggedIn(deptName) {
+    const normDept = (deptName || "").toUpperCase();
+    return this.loggedInDoctors.some(d => d.toUpperCase() === normDept);
+  }
+
+  markDoctorLoggedIn(staffName, deptName) {
+    const normDept = (deptName || "").toUpperCase();
+    if (!this.loggedInDoctors.includes(normDept)) {
+      this.loggedInDoctors.push(normDept);
+      localStorage.setItem("chikitsa_logged_in_doctors", JSON.stringify(this.loggedInDoctors));
+    }
+    this.renderFacilityDashboard();
+  }
+
+  toggleDoctorLogin(deptName) {
+    const normDept = (deptName || "").toUpperCase();
+    const idx = this.loggedInDoctors.indexOf(normDept);
+    if (idx >= 0) {
+      this.loggedInDoctors.splice(idx, 1);
+    } else {
+      this.loggedInDoctors.push(normDept);
+    }
+    localStorage.setItem("chikitsa_logged_in_doctors", JSON.stringify(this.loggedInDoctors));
+    this.renderFacilityDashboard();
   }
 
   viewPatientCard(patientId) {
@@ -1119,6 +1238,8 @@ class ChikitsaApp {
     const medsListEl = document.getElementById("fac-meds-list");
     const staffListEl = document.getElementById("fac-staff-list");
     const doctorsGridEl = document.getElementById("facility-dept-doctors-grid");
+    const countBadge = document.getElementById("facility-active-count-badge");
+    const sidebarDocStatus = document.getElementById("sidebar-doc-status");
 
     if (totBedsEl) totBedsEl.textContent = fac.totalBeds;
     if (occBedsEl) occBedsEl.textContent = fac.occupiedBeds;
@@ -1126,29 +1247,73 @@ class ChikitsaApp {
     if (icuBedsEl) icuBedsEl.textContent = `${fac.icuEmergencyBeds.vacant} / ${fac.icuEmergencyBeds.total}`;
     if (oxyEl) oxyEl.textContent = `${fac.oxygenCylinders.full} / ${fac.oxygenCylinders.total}`;
 
+    const totalDepts = fac.departments ? fac.departments.length : 6;
+    const activeDocCount = fac.departments ? fac.departments.filter(d => this.isDoctorLoggedIn(d.name)).length : 0;
+
+    if (countBadge) {
+      countBadge.textContent = `${activeDocCount} of ${totalDepts} Specialists Active`;
+      countBadge.className = activeDocCount > 0 ? "badge badge-green" : "badge badge-yellow";
+    }
+    if (sidebarDocStatus) {
+      sidebarDocStatus.textContent = `👨‍⚕️ ${activeDocCount} / ${totalDepts} Doctors Active`;
+    }
+
     // Render Department Doctors Grid for Patients & Workers
+    // GATED: Doctor details visible ONLY if the specialist doctor has logged in
     if (doctorsGridEl && fac.departments) {
       doctorsGridEl.innerHTML = "";
       fac.departments.forEach(dept => {
+        const isLoggedIn = this.isDoctorLoggedIn(dept.name);
         const card = document.createElement("div");
         card.className = "card";
-        card.style.border = "1px solid #e2e8f0";
-        card.style.borderTop = "4px solid #0284c7";
-        card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-            <span style="font-size: 2.2rem;">${dept.icon || '👨‍⚕️'}</span>
-            <span class="badge badge-green">${dept.status || 'Available Today'}</span>
-          </div>
-          <h4 style="margin:0 0 2px 0; color:#0369a1; font-size:1.1rem;">${dept.name}</h4>
-          <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
-          <p style="margin:0; font-weight:700; font-size:1.05rem; color:#1e293b;">${dept.doctorName}</p>
-          <p style="margin:0 0 8px 0; font-size:0.85rem; color:#64748b;">${dept.qualification}</p>
-          <div style="background:#f8fafc; padding:8px 10px; border-radius:6px; font-size:0.85rem; margin-top:8px; border:1px solid #e2e8f0;">
-            <div>📍 <strong>OPD Room:</strong> ${dept.room}</div>
-            <div>⏱️ <strong>Timings:</strong> ${dept.timings}</div>
-            <div>👥 <strong>Active OPD Cases:</strong> ${dept.activeCases || 12}</div>
-          </div>
-        `;
+        card.style.border = isLoggedIn ? "1px solid #10b981" : "1px solid #e2e8f0";
+        card.style.borderTop = isLoggedIn ? "4px solid #10b981" : "4px solid #94a3b8";
+        card.style.background = isLoggedIn ? "#ffffff" : "#f8fafc";
+        card.style.transition = "all 0.2s ease";
+
+        if (isLoggedIn) {
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+              <span style="font-size: 2.2rem;">${dept.icon || '👨‍⚕️'}</span>
+              <span class="badge badge-green">🟢 Available Today (Logged In)</span>
+            </div>
+            <h4 style="margin:0 0 2px 0; color:#0369a1; font-size:1.1rem;">${dept.name}</h4>
+            <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
+            <p style="margin:0; font-weight:700; font-size:1.05rem; color:#0f172a;">${dept.doctorName}</p>
+            <p style="margin:0 0 8px 0; font-size:0.85rem; color:#059669; font-weight:600;">${dept.qualification}</p>
+            <div style="background:#f0fdf4; padding:8px 10px; border-radius:6px; font-size:0.85rem; margin-top:8px; border:1px solid #bbf7d0;">
+              <div>📍 <strong>OPD Room:</strong> ${dept.room}</div>
+              <div>⏱️ <strong>Duty Hours:</strong> ${dept.timings}</div>
+              <div>👥 <strong>Active OPD Cases:</strong> ${dept.activeCases || 12}</div>
+            </div>
+            <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size: 0.78rem; color:#059669; font-weight:600;">● Online for Consultation</span>
+              <button class="btn btn-secondary btn-sm" onclick="window.chikitsaApp.toggleDoctorLogin('${dept.name}')" title="Sign Out Doctor">
+                🚪 Sign Out
+              </button>
+            </div>
+          `;
+        } else {
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+              <span style="font-size: 2.2rem; filter: grayscale(80%);">${dept.icon || '👨‍⚕️'}</span>
+              <span class="badge badge-secondary" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">⚪ Doctor Not Available (Offline)</span>
+            </div>
+            <h4 style="margin:0 0 2px 0; color:#475569; font-size:1.1rem;">${dept.name}</h4>
+            <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
+            <p style="margin:0; font-weight:600; font-size:0.95rem; color:#94a3b8; font-style:italic;">Doctor Offline / Not Signed In</p>
+            <p style="margin:0 0 8px 0; font-size:0.82rem; color:#94a3b8;">Awaiting Specialist Login</p>
+            <div style="background:#f1f5f9; padding:8px 10px; border-radius:6px; font-size:0.82rem; margin-top:8px; border:1px dashed #cbd5e1; color:#64748b;">
+              🔒 <em>Doctor details and live OPD availability will be visible to patients once the doctor logs in with official credentials.</em>
+            </div>
+            <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size: 0.78rem; color:#94a3b8;">Status: Offline</span>
+              <button class="btn btn-secondary btn-sm" onclick="window.chikitsaApp.toggleDoctorLogin('${dept.name}')" style="border: 1px dashed #0284c7; color: #0284c7; background: #ffffff;" title="Simulate Doctor Sign-In">
+                🔑 Doctor Sign In
+              </button>
+            </div>
+          `;
+        }
         doctorsGridEl.appendChild(card);
       });
     }

@@ -41,46 +41,77 @@
     </div>
   </header>
 
-  <!-- NAVIGATION BAR (All 9 Modules) -->
-  <nav class="nav-container">
-    <div class="nav-tabs">
-      <button class="tab-btn active" data-tab="telecon">
-        <span>🩺</span> <span data-i18n="navTelecon">Teleconsultation</span>
-      </button>
-      <button class="tab-btn" data-tab="queue">
-        <span>📅</span> <span data-i18n="navQueue">Appointments & Queue</span>
-      </button>
-      <button class="tab-btn" data-tab="triage">
-        <span>🌡️</span> <span data-i18n="navTriage">Digital Triage</span>
-      </button>
-      <button class="tab-btn" data-tab="records">
-        <span>📁</span> <span data-i18n="navRecords">Patient Records</span>
-      </button>
-      <button class="tab-btn" data-tab="referrals">
-        <span>🚑</span> <span data-i18n="navReferrals">Referral Tracking</span>
-      </button>
-      <button class="tab-btn" data-tab="diagnostics">
-        <span>🔬</span> <span data-i18n="navDiagnostics">Diagnostics</span>
-      </button>
-      <button class="tab-btn" data-tab="highrisk">
-        <span>⚠️</span> <span data-i18n="navHighRisk">High-Risk Follow-up</span>
-      </button>
-      <!-- Facility Dashboard: Accessible to Patients (View Doctors & Capacity) and Workers (Full Admin) -->
-      <button class="tab-btn" id="tab-nav-facility" data-tab="facility">
-        <span>🏢</span> <span data-i18n="navFacility">Facility & Doctors</span>
-      </button>
-      <button class="tab-btn" data-tab="emergency">
-        <span>🚨</span> <span data-i18n="navEmergency">Emergency Escalation</span>
-      </button>
-      <!-- Central Database: Stores every single input entered -->
-      <button class="tab-btn" data-tab="database">
-        <span>💾</span> <span data-i18n="navDatabase">Central Database</span>
-      </button>
-    </div>
-  </nav>
+  <!-- APP LAYOUT CONTAINER WITH LEFT SIDEBAR MENU -->
+  <div class="app-layout">
 
-  <!-- MAIN APPLICATION CONTENT -->
-  <main class="main-wrapper">
+    <!-- LEFT SIDEBAR NAVIGATION MENU -->
+    <aside class="sidebar-nav" id="sidebar-nav">
+      <div class="sidebar-section-header">
+        <span class="sidebar-section-title">CHIKITSA MENU</span>
+        <span class="sidebar-module-badge">10 Modules</span>
+      </div>
+
+      <nav class="sidebar-menu">
+        <button class="tab-btn active" data-tab="telecon">
+          <span class="tab-icon">🩺</span>
+          <span class="tab-title" data-i18n="navTelecon">Teleconsultation</span>
+        </button>
+        <button class="tab-btn" data-tab="queue">
+          <span class="tab-icon">📅</span>
+          <span class="tab-title" data-i18n="navQueue">Appointments & Queue</span>
+        </button>
+        <button class="tab-btn" data-tab="triage">
+          <span class="tab-icon">🌡️</span>
+          <span class="tab-title" data-i18n="navTriage">Digital Triage</span>
+        </button>
+        <button class="tab-btn" data-tab="records">
+          <span class="tab-icon">📁</span>
+          <span class="tab-title" data-i18n="navRecords">Patient Records</span>
+        </button>
+        <button class="tab-btn" data-tab="referrals">
+          <span class="tab-icon">🚑</span>
+          <span class="tab-title" data-i18n="navReferrals">Referral Tracking</span>
+        </button>
+        <button class="tab-btn" data-tab="diagnostics">
+          <span class="tab-icon">🔬</span>
+          <span class="tab-title" data-i18n="navDiagnostics">Diagnostics</span>
+        </button>
+        <button class="tab-btn" data-tab="highrisk">
+          <span class="tab-icon">⚠️</span>
+          <span class="tab-title" data-i18n="navHighRisk">High-Risk Follow-up</span>
+        </button>
+        <!-- Facility Dashboard: Accessible to Patients (View Doctors & Capacity) and Workers (Full Admin) -->
+        <button class="tab-btn" id="tab-nav-facility" data-tab="facility">
+          <span class="tab-icon">🏢</span>
+          <span class="tab-title" data-i18n="navFacility">Facility & Doctors</span>
+        </button>
+        <button class="tab-btn" data-tab="emergency">
+          <span class="tab-icon">🚨</span>
+          <span class="tab-title" data-i18n="navEmergency">Emergency Escalation</span>
+        </button>
+        <!-- Central Database: Stores every single input entered -->
+        <button class="tab-btn" data-tab="database">
+          <span class="tab-icon">💾</span>
+          <span class="tab-title" data-i18n="navDatabase">Central Database</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Hospital Summary Widget -->
+      <div class="sidebar-hospital-card">
+        <div style="font-weight: 800; font-size: 0.85rem; color: #0369a1; display: flex; align-items: center; gap: 6px;">
+          <span>🏥</span> <span>ABCD HOSPITAL</span>
+        </div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+          Rural Health Centre Network
+        </div>
+        <div id="sidebar-doc-status" style="margin-top: 8px; font-size: 0.78rem; font-weight: 600; padding: 4px 8px; background: #e0f2fe; border-radius: 6px; color: #0369a1; text-align: center;">
+          👨‍⚕️ Checking Doctor Status...
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN APPLICATION CONTENT -->
+    <main class="main-wrapper">
 
     <!-- ==================== MODULE 1: TELECONSULTATION ==================== -->
     <section id="view-telecon" class="module-view active">
@@ -736,7 +767,8 @@
       </div>
     </section>
 
-  </main>
+    </main>
+  </div> <!-- /.app-layout -->
 
   <!-- ==================== FLOATING AI HOSPITAL ASSISTANT ==================== -->
   <button id="open-ai-fab" class="ai-fab" title="Open AI Hospital Assistant">
@@ -868,7 +900,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="chikitsaApp.closeWorkerDetailsModal()" data-i18n="cancelBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary" data-i18n="saveWorkerBtn">Verify & Access Dashboard</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-worker" data-i18n="confirmAndSubmit">Confirm and Submit</button>
         </div>
       </form>
     </div>
@@ -956,7 +988,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-add-patient').style.display='none'" data-i18n="cancelBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary" data-i18n="submitBtn">Save & View In Records</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-patient" data-i18n="confirmAndSubmit">Confirm and Submit</button>
         </div>
       </form>
     </div>
