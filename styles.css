@@ -225,156 +225,72 @@ button:active {
   background: var(--primary-light);
 }
 
-/* ==================== APP LAYOUT & LEFT SIDEBAR NAVIGATION ==================== */
-.app-layout {
-  display: flex;
-  min-height: calc(100vh - 130px);
-  width: 100%;
-  background: var(--bg-page);
-}
-
-.sidebar-nav {
-  width: 280px;
-  min-width: 280px;
-  max-width: 280px;
+/* NAVIGATION BAR */
+.nav-container {
   background: #ffffff;
-  border-right: 1px solid #e2e8f0;
-  padding: 18px 12px;
+  border-bottom: 2px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  overflow-x: auto;
+}
+
+.nav-tabs {
+  max-width: 1300px;
+  margin: 0 auto;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: sticky;
-  top: 72px;
-  height: calc(100vh - 72px);
-  overflow-y: auto;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
-  z-index: 80;
-}
-
-.sidebar-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 10px 8px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.sidebar-section-title {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #94a3b8;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.sidebar-module-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  background: #e0f2fe;
-  color: #0369a1;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.sidebar-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  padding: 8px 16px;
+  white-space: nowrap;
 }
 
 .tab-btn {
-  padding: 11px 14px;
+  padding: 10px 18px;
   background: transparent;
-  color: #334155;
-  border-radius: 10px;
-  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 0.92rem;
-  border: 1px solid transparent;
-  text-align: left;
-  width: 100%;
-  transition: all 0.18s ease;
-  line-height: 1.3;
+  gap: 8px;
+  font-size: 0.95rem;
 }
 
 .tab-btn:hover {
-  background: #f1f5f9;
+  background: #f8fafc;
   color: var(--primary-dark);
-  transform: translateX(3px);
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-  color: #ffffff;
-  font-weight: 700;
-  border-color: #0f766e;
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.28);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border: 1px solid rgba(13, 148, 136, 0.3);
 }
 
-.tab-btn .tab-icon {
-  font-size: 1.25rem;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
+.tab-btn .tab-badge {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
 }
 
-.tab-btn.active .tab-title {
-  color: #ffffff;
+/* Worker only badge in tab */
+.worker-only-tag {
+  background: #fef08a;
+  color: #854d0e;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-left: 4px;
 }
 
-.sidebar-hospital-card {
-  margin-top: auto;
-  padding: 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-}
-
-/* MAIN CONTENT CONTAINER */
+/* MAIN CONTENT */
 .main-wrapper {
-  flex: 1;
-  min-width: 0;
-  margin: 0 auto;
-  padding: 24px 30px 60px;
+  max-width: 1300px;
+  margin: 20px auto;
+  padding: 0 16px;
   width: 100%;
-}
-
-@media (max-width: 920px) {
-  .app-layout {
-    flex-direction: column;
-  }
-  .sidebar-nav {
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
-    height: auto;
-    position: static;
-    border-right: none;
-    border-bottom: 2px solid #e2e8f0;
-    padding: 10px 14px;
-  }
-  .sidebar-menu {
-    flex-direction: row;
-    overflow-x: auto;
-    gap: 8px;
-    padding-bottom: 6px;
-  }
-  .sidebar-menu .tab-btn {
-    width: auto;
-    white-space: nowrap;
-    padding: 8px 14px;
-    font-size: 0.88rem;
-  }
-  .sidebar-hospital-card {
-    display: none;
-  }
-  .main-wrapper {
-    padding: 16px;
-  }
+  flex: 1;
 }
 
 .module-view {

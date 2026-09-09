@@ -38,7 +38,7 @@ const I18N = {
     workerNameLabel: "Your Full Name:",
     hospitalNameLabel: "Hospital / PHC Name:",
     deptLabel: "Department / Role:",
-    saveWorkerBtn: "Confirm & Access Staff Dashboard",
+    saveWorkerBtn: "Confirm and Submit",
     selectRoleTitle: "Welcome to ChikitsaConnect",
     selectRoleSubtitle: "Please choose how you are using this platform:",
     rolePatientDesc: "I need doctor consultation, token, symptoms check, or test records",
@@ -90,7 +90,7 @@ const I18N = {
     workerNameLabel: "మీ పూర్తి పేరు:",
     hospitalNameLabel: "ఆసుపత్రి / PHC పేరు:",
     deptLabel: "విభాగం / హోదా:",
-    saveWorkerBtn: "నిర్ధారించి డాష్‌బోర్డ్ తెరవండి",
+    saveWorkerBtn: "ధృవీకరించి సమర్పించండి (Confirm and Submit)",
     selectRoleTitle: "చికిత్స కనెక్ట్‌కు స్వాగతం",
     selectRoleSubtitle: "మీరు ఈ వెబ్‌సైట్‌ను ఎలా ఉపయోగించాలనుకుంటున్నారు?",
     rolePatientDesc: "నాకు డాక్టర్ సలహా, టోకెన్, జబ్బు తనిఖీ లేదా రిపోర్టులు కావాలి",
@@ -142,7 +142,7 @@ const I18N = {
     workerNameLabel: "आपका पूरा नाम:",
     hospitalNameLabel: "अस्पताल / PHC का नाम:",
     deptLabel: "विभाग / पद:",
-    saveWorkerBtn: "पुष्टि करें और स्टाफ डैशबोर्ड खोलें",
+    saveWorkerBtn: "पुष्टि करें और जमा करें (Confirm and Submit)",
     selectRoleTitle: "चिकित्सा कनेक्ट में आपका स्वागत है",
     selectRoleSubtitle: "कृपया चुनें कि आप इस पोर्टल का उपयोग किस रूप में कर रहे हैं:",
     rolePatientDesc: "मुझे डॉक्टर की सलाह, टोकन, लक्षण जांच या टेस्ट रिपोर्ट चाहिए",
@@ -206,8 +206,8 @@ class ChikitsaApp {
     // Initialise UI strings with base language
     this.setLanguage(this.lang, false);
 
-    // Prompt Language Selector Modal EVERY TIME the link is opened
-    this.showLanguageModal();
+    // Show Role Selection Modal immediately on launch (with language choices at top)
+    this.showRoleModal();
 
     this.bindGlobalEvents();
     this.bindPatientTriageAI();
@@ -272,6 +272,7 @@ class ChikitsaApp {
 
     this.applyRolePermissions();
     this.updateRoleBadgeUI();
+    this.renderFacilityDashboard();
   }
 
   applyRolePermissions() {
@@ -509,8 +510,11 @@ class ChikitsaApp {
           }
         );
 
-        this.closeWorkerDetailsModal();
-        // Give staff immediate view of ABCD HOSPITAL Facility Dashboard
+        // Close all onboarding modals completely and immediately open website
+        document.querySelectorAll(".modal-backdrop").forEach(m => {
+          m.style.display = "none";
+        });
+        // Open website and switch to ABCD HOSPITAL Facility Dashboard
         this.switchTab("facility");
       });
     }
@@ -1259,63 +1263,118 @@ class ChikitsaApp {
     }
 
     // Render Department Doctors Grid for Patients & Workers
-    // GATED: Doctor details visible ONLY if the specialist doctor has logged in
+    // IN PATIENT MODE:
+    // 1. ONLY VISIBLE WHICH DOCTOR IS AVAILABLE!
+    // 2. ABSOLUTELY NO OPTION TO SIGN IN / SIGN OUT!
     if (doctorsGridEl && fac.departments) {
       doctorsGridEl.innerHTML = "";
-      fac.departments.forEach(dept => {
-        const isLoggedIn = this.isDoctorLoggedIn(dept.name);
-        const card = document.createElement("div");
-        card.className = "card";
-        card.style.border = isLoggedIn ? "1px solid #10b981" : "1px solid #e2e8f0";
-        card.style.borderTop = isLoggedIn ? "4px solid #10b981" : "4px solid #94a3b8";
-        card.style.background = isLoggedIn ? "#ffffff" : "#f8fafc";
-        card.style.transition = "all 0.2s ease";
+      const isPatient = this.role !== "worker";
 
-        if (isLoggedIn) {
-          card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-              <span style="font-size: 2.2rem;">${dept.icon || '👨‍⚕️'}</span>
-              <span class="badge badge-green">🟢 Available Today (Logged In)</span>
-            </div>
-            <h4 style="margin:0 0 2px 0; color:#0369a1; font-size:1.1rem;">${dept.name}</h4>
-            <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
-            <p style="margin:0; font-weight:700; font-size:1.05rem; color:#0f172a;">${dept.doctorName}</p>
-            <p style="margin:0 0 8px 0; font-size:0.85rem; color:#059669; font-weight:600;">${dept.qualification}</p>
-            <div style="background:#f0fdf4; padding:8px 10px; border-radius:6px; font-size:0.85rem; margin-top:8px; border:1px solid #bbf7d0;">
-              <div>📍 <strong>OPD Room:</strong> ${dept.room}</div>
-              <div>⏱️ <strong>Duty Hours:</strong> ${dept.timings}</div>
-              <div>👥 <strong>Active OPD Cases:</strong> ${dept.activeCases || 12}</div>
-            </div>
-            <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size: 0.78rem; color:#059669; font-weight:600;">● Online for Consultation</span>
-              <button class="btn btn-secondary btn-sm" onclick="window.chikitsaApp.toggleDoctorLogin('${dept.name}')" title="Sign Out Doctor">
-                🚪 Sign Out
-              </button>
-            </div>
+      if (isPatient) {
+        // Patient Mode: Only show specialist doctors who are available / signed in
+        const availableDepts = fac.departments.filter(dept => this.isDoctorLoggedIn(dept.name));
+
+        if (availableDepts.length === 0) {
+          const emptyCard = document.createElement("div");
+          emptyCard.className = "card";
+          emptyCard.style.gridColumn = "1 / -1";
+          emptyCard.style.textAlign = "center";
+          emptyCard.style.padding = "36px 20px";
+          emptyCard.style.background = "#f8fafc";
+          emptyCard.style.border = "2px dashed #cbd5e1";
+          emptyCard.innerHTML = `
+            <div style="font-size: 3rem; margin-bottom: 12px;">🩺</div>
+            <h3 style="color: #475569; margin-bottom: 8px;">No Specialist Doctors Currently Available</h3>
+            <p style="color: #64748b; max-width: 540px; margin: 0 auto 16px auto; font-size: 0.95rem;">
+              Only doctors currently on duty appear here for patients. You can connect with on-call Medical Officers in <strong>Teleconsultation</strong> or take an <strong>OPD Queue Token</strong> anytime 24x7.
+            </p>
+            <span class="badge badge-yellow" style="font-size: 0.9rem;">Awaiting Specialist Doctor Sign-In</span>
           `;
+          doctorsGridEl.appendChild(emptyCard);
         } else {
-          card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-              <span style="font-size: 2.2rem; filter: grayscale(80%);">${dept.icon || '👨‍⚕️'}</span>
-              <span class="badge badge-secondary" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">⚪ Doctor Not Available (Offline)</span>
-            </div>
-            <h4 style="margin:0 0 2px 0; color:#475569; font-size:1.1rem;">${dept.name}</h4>
-            <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
-            <p style="margin:0; font-weight:600; font-size:0.95rem; color:#94a3b8; font-style:italic;">Doctor Offline / Not Signed In</p>
-            <p style="margin:0 0 8px 0; font-size:0.82rem; color:#94a3b8;">Awaiting Specialist Login</p>
-            <div style="background:#f1f5f9; padding:8px 10px; border-radius:6px; font-size:0.82rem; margin-top:8px; border:1px dashed #cbd5e1; color:#64748b;">
-              🔒 <em>Doctor details and live OPD availability will be visible to patients once the doctor logs in with official credentials.</em>
-            </div>
-            <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size: 0.78rem; color:#94a3b8;">Status: Offline</span>
-              <button class="btn btn-secondary btn-sm" onclick="window.chikitsaApp.toggleDoctorLogin('${dept.name}')" style="border: 1px dashed #0284c7; color: #0284c7; background: #ffffff;" title="Simulate Doctor Sign-In">
-                🔑 Doctor Sign In
-              </button>
-            </div>
-          `;
+          availableDepts.forEach(dept => {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.style.border = "1px solid #10b981";
+            card.style.borderTop = "4px solid #10b981";
+            card.style.background = "#ffffff";
+            card.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.05)";
+            card.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                <span style="font-size: 2.2rem;">${dept.icon || '👨‍⚕️'}</span>
+                <span class="badge badge-green">🟢 Available Today</span>
+              </div>
+              <h4 style="margin:0 0 2px 0; color:#0369a1; font-size:1.15rem;">${dept.name}</h4>
+              <div style="font-size:0.82rem; color:#64748b; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
+              <p style="margin:0; font-weight:700; font-size:1.05rem; color:#0f172a;">${dept.doctorName}</p>
+              <p style="margin:0 0 8px 0; font-size:0.85rem; color:#059669; font-weight:600;">${dept.qualification}</p>
+              <div style="background:#f0fdf4; padding:10px 12px; border-radius:8px; font-size:0.85rem; margin-top:8px; border:1px solid #bbf7d0;">
+                <div>📍 <strong>OPD Room:</strong> ${dept.room}</div>
+                <div>⏱️ <strong>Duty Hours:</strong> ${dept.timings}</div>
+                <div>👥 <strong>Active OPD Cases:</strong> ${dept.activeCases || 12}</div>
+              </div>
+              <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.8rem; color:#059669; font-weight:600;">● Active on Duty</span>
+                <button class="btn btn-primary btn-sm" onclick="chikitsaApp.switchTab('telecon')">
+                  📞 Consult Now
+                </button>
+              </div>
+            `;
+            // NOTE: ABSOLUTELY NO sign in or sign out button for patients!
+            doctorsGridEl.appendChild(card);
+          });
         }
-        doctorsGridEl.appendChild(card);
-      });
+      } else {
+        // Worker Mode: Hospital staff can see full department status
+        fac.departments.forEach(dept => {
+          const isLoggedIn = this.isDoctorLoggedIn(dept.name);
+          const card = document.createElement("div");
+          card.className = "card";
+          card.style.border = isLoggedIn ? "1px solid #10b981" : "1px solid #e2e8f0";
+          card.style.borderTop = isLoggedIn ? "4px solid #10b981" : "4px solid #94a3b8";
+          card.style.background = isLoggedIn ? "#ffffff" : "#f8fafc";
+          card.style.transition = "all 0.2s ease";
+
+          if (isLoggedIn) {
+            card.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                <span style="font-size: 2.2rem;">${dept.icon || '👨‍⚕️'}</span>
+                <span class="badge badge-green">🟢 Active On Duty (Signed In)</span>
+              </div>
+              <h4 style="margin:0 0 2px 0; color:#0369a1; font-size:1.1rem;">${dept.name}</h4>
+              <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
+              <p style="margin:0; font-weight:700; font-size:1.05rem; color:#0f172a;">${dept.doctorName}</p>
+              <p style="margin:0 0 8px 0; font-size:0.85rem; color:#059669; font-weight:600;">${dept.qualification}</p>
+              <div style="background:#f0fdf4; padding:8px 10px; border-radius:6px; font-size:0.85rem; margin-top:8px; border:1px solid #bbf7d0;">
+                <div>📍 <strong>OPD Room:</strong> ${dept.room}</div>
+                <div>⏱️ <strong>Duty Hours:</strong> ${dept.timings}</div>
+                <div>👥 <strong>Active OPD Cases:</strong> ${dept.activeCases || 12}</div>
+              </div>
+              <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size: 0.78rem; color:#059669; font-weight:600;">● Online for Consultation</span>
+                <button class="btn btn-secondary btn-sm" onclick="window.chikitsaApp.toggleDoctorLogin('${dept.name}')" title="End Specialist Shift">
+                  🚪 End Shift
+                </button>
+              </div>
+            `;
+          } else {
+            card.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                <span style="font-size: 2.2rem; filter: grayscale(80%);">${dept.icon || '👨‍⚕️'}</span>
+                <span class="badge badge-secondary" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">⚪ Offline</span>
+              </div>
+              <h4 style="margin:0 0 2px 0; color:#475569; font-size:1.1rem;">${dept.name}</h4>
+              <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:8px;">${this.lang === 'te' ? (dept.nameTe || '') : this.lang === 'hi' ? (dept.nameHi || '') : ''}</div>
+              <p style="margin:0; font-weight:600; font-size:0.95rem; color:#94a3b8;">${dept.doctorName}</p>
+              <p style="margin:0 0 8px 0; font-size:0.82rem; color:#94a3b8;">${dept.qualification}</p>
+              <div style="background:#f1f5f9; padding:8px 10px; border-radius:6px; font-size:0.82rem; margin-top:8px; border:1px dashed #cbd5e1; color:#64748b;">
+                🔒 Doctor Offline - Awaiting official sign-in
+              </div>
+            `;
+          }
+          doctorsGridEl.appendChild(card);
+        });
+      }
     }
 
     if (medsListEl) {
