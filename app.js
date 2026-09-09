@@ -206,8 +206,8 @@ class ChikitsaApp {
     // Initialise UI strings with base language
     this.setLanguage(this.lang, false);
 
-    // Show Role Selection Modal immediately on launch (with language choices at top)
-    this.showRoleModal();
+    // Step 1: Prompt Language Question Interface FIRST
+    this.showLanguageModal();
 
     this.bindGlobalEvents();
     this.bindPatientTriageAI();
