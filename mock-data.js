@@ -74,11 +74,12 @@ const DEFAULT_MOCK_DATA = {
   ],
 
   queue: [
-    { token: "OPD-014", patientName: "Anand Kumar", department: "Paediatrics", doctor: "Dr. Kaarthikeya, MD", room: "Room 104", status: "Serving", waitMins: 0 },
-    { token: "OPD-015", patientName: "Saraswathi Bai", department: "Cardiology", doctor: "Dr. Likith, DM", room: "Room 102", status: "Waiting", waitMins: 5 },
-    { token: "OPD-016", patientName: "Lakshmi Devi", department: "Gynaecology", doctor: "Dr. Aadhya, MS", room: "Room 105", status: "Waiting", waitMins: 12 },
-    { token: "OPD-017", patientName: "Ramesh Reddy", department: "Neurology", doctor: "Dr. Kanishq, MD", room: "Room 101", status: "Waiting", waitMins: 20 },
-    { token: "OPD-018", patientName: "Balaram Naik", department: "Orthopaedics", doctor: "Dr. Harish, MS", room: "Room 103", status: "Waiting", waitMins: 30 }
+    { token: "OPD-014", patientName: "Anand Kumar", department: "Paediatrics", doctor: "Dr. Kaarthikeya, MD", room: "Room 104", status: "Serving", waitMins: 0, waitSeconds: 0 },
+    { token: "OPD-015", patientName: "Saraswathi Bai", department: "Cardiology", doctor: "Dr. Likith, DM", room: "Room 102", status: "Waiting", waitMins: 4, waitSeconds: 240 },
+    { token: "OPD-016", patientName: "Lakshmi Devi", department: "Gynaecology", doctor: "Dr. Aadhya, MS", room: "Room 105", status: "Waiting", waitMins: 8, waitSeconds: 480 },
+    { token: "OPD-017", patientName: "Ramesh Reddy", department: "Neurology", doctor: "Dr. Kanishq, MD", room: "Room 101", status: "Waiting", waitMins: 12, waitSeconds: 720 },
+    { token: "OPD-018", patientName: "Balaram Naik", department: "Orthopaedics", doctor: "Dr. Harish, MS", room: "Room 103", status: "Waiting", waitMins: 16, waitSeconds: 960 },
+    { token: "OPD-019", patientName: "Sita Ramaiah", department: "Oncology", doctor: "Dr. Keerthi", room: "Room 106", status: "Waiting", waitMins: 20, waitSeconds: 1200 }
   ],
 
   referrals: [

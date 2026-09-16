@@ -907,25 +907,183 @@ tr:hover {
   margin-top: 40px;
 }
 
-/* RESPONSIVE */
+/* ==================== MOBILE WEBSITE OPTIMIZATIONS ==================== */
 @media (max-width: 768px) {
+  /* Layout & Viewport */
+  body {
+    font-size: 15px;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+  
+  .container {
+    padding: 0 12px;
+  }
+
+  /* Header & Navigation */
+  .site-header {
+    padding: 10px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
   .header-inner {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .header-controls {
+    flex-direction: row;
     justify-content: space-between;
+    align-items: center;
+    gap: 8px;
   }
-  .choice-grid {
-    grid-template-columns: 1fr;
+
+  .brand h1 {
+    font-size: 1.25rem;
   }
-  .video-grid {
-    grid-template-columns: 1fr;
+
+  .brand .tagline {
+    display: none;
   }
+
+  .header-controls {
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .header-controls .btn-outline,
+  .header-controls .lang-selector {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  /* Touch-friendly horizontal scrollable navigation */
+  .nav-tabs {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    padding: 8px 12px;
+    gap: 8px;
+    background: #ffffff;
+    border-bottom: 2px solid #e2e8f0;
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    font-size: 0.88rem;
+    border-radius: 24px;
+  }
+
+  /* Module Titles & Cards */
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .section-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .grid-2, .grid-3, .choice-grid, .video-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  /* Queue Board on Mobile */
+  .queue-board {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .queue-board > div {
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding-bottom: 12px;
+  }
+
+  .queue-board > div:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .queue-current-token {
+    font-size: 2.5rem;
+  }
+
+  /* Responsive Tables with Swipe Indicator */
+  .table-responsive {
+    border-radius: 8px;
+    box-shadow: inset -6px 0 8px -4px rgba(0,0,0,0.1);
+  }
+
+  table {
+    min-width: 580px;
+    font-size: 0.85rem;
+  }
+
+  table th, table td {
+    padding: 10px 8px;
+  }
+
+  /* Mobile Modals (Bottom Sheet / Full-Width) */
+  .modal-dialog {
+    width: 96% !important;
+    max-width: 96% !important;
+    margin: 10px auto;
+    border-radius: 16px;
+    max-height: 90vh;
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-body {
+    padding: 14px 16px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .form-control {
+    font-size: 16px; /* Prevents auto-zoom on iOS */
+    padding: 12px 14px;
+    min-height: 44px;
+  }
+
+  .btn {
+    min-height: 44px; /* Touch friendly tap target */
+  }
+
+  /* Floating Action Button Thumb-Zone */
   .ai-fab {
     bottom: 16px;
-    right: 16px;
-    padding: 10px 16px;
+    right: 14px;
+    padding: 12px 18px;
     font-size: 0.9rem;
+    border-radius: 30px;
   }
 }

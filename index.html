@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d9488">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ChikitsaConnect - Rural Healthcare & Emergency Tele-Care</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -193,19 +196,22 @@
         <div style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 24px;">
           <span style="font-size: 0.9rem; color: #94a3b8;" data-i18n="yourToken">Your Token</span>
           <div id="my-token-display" style="font-size: 2.2rem; font-weight: 800; color: #4ade80;">OPD-019</div>
-          <small style="color: #cbd5e1;">Doctor: Dr. Sunitha Rao (Room 1)</small>
+          <small id="my-token-doc-info" style="color: #cbd5e1;">Doctor: Dr. Keerthi (Room 106)</small>
         </div>
 
         <div style="border-left: 2px solid rgba(255,255,255,0.1); padding-left: 24px;">
           <span style="font-size: 0.9rem; color: #94a3b8;" data-i18n="estWait">Est. Wait Time</span>
-          <div style="font-size: 2.2rem; font-weight: 800; color: #f59e0b;">~15 min</div>
-          <small style="color: #cbd5e1;">3 Patients ahead of you</small>
+          <div id="queue-board-est-wait" style="font-size: 2.2rem; font-weight: 800; color: #f59e0b;">20m 00s</div>
+          <small id="queue-board-ahead-count" style="color: #cbd5e1;">⏱️ Live Countdown Active (Reduces 1s)</small>
         </div>
       </div>
 
       <!-- Queue Table -->
       <div class="card">
-        <h3 style="margin-bottom: 16px;">Live OPD Token Roster - Today</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+          <h3 style="margin: 0;">Live OPD Token Roster - Today</h3>
+          <span class="badge badge-green" style="font-size: 0.85rem;">⏱️ Live 1-Second Countdown Active</span>
+        </div>
         <div class="table-responsive">
           <table>
             <thead>
@@ -216,7 +222,7 @@
                 <th>Doctor</th>
                 <th>Room</th>
                 <th>Status</th>
-                <th>Est. Wait</th>
+                <th>Est. Wait (Live Countdown)</th>
               </tr>
             </thead>
             <tbody id="queue-tokens-list">
@@ -326,37 +332,60 @@
         </div>
       </div>
 
-      <!-- Stats Bar & Search -->
-      <div class="card" style="margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <span style="font-weight: 700; color: var(--text-muted);">Total Registered:</span>
-            <span id="total-patients-count" class="badge badge-blue" style="font-size: 1rem;">4</span>
+      <!-- WORKER VIEW: Full records table (Facility Only) -->
+      <div id="worker-records-view">
+        <!-- Stats Bar & Search -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span style="font-weight: 700; color: var(--text-muted);">Total Registered:</span>
+              <span id="total-patients-count" class="badge badge-blue" style="font-size: 1rem;">4</span>
+              <span class="badge badge-green" style="font-size: 0.8rem;">🔒 Facility Authorized View</span>
+            </div>
+            <div style="flex: 1; max-width: 450px;">
+              <input type="text" id="patient-search-input" class="form-control" placeholder="Search by Name, Village, Mobile, or ABHA ID..." data-i18n-ph="searchPatient">
+            </div>
           </div>
-          <div style="flex: 1; max-width: 450px;">
-            <input type="text" id="patient-search-input" class="form-control" placeholder="Search by Name, Village, Mobile, or ABHA ID..." data-i18n-ph="searchPatient">
-          </div>
+        </div>
+
+        <!-- Patient Records Table -->
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient ID & Token</th>
+                <th>Name / Demographics</th>
+                <th>Weight & Contact</th>
+                <th>Condition / Reason</th>
+                <th>Triage</th>
+                <th>Latest Vitals</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="patient-records-list">
+              <!-- Dynamically populated from localStorage & mock data -->
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Patient Records Table -->
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Patient ID & Token</th>
-              <th>Name / Demographics</th>
-              <th>Contact & Village</th>
-              <th>Condition / Symptoms</th>
-              <th>Triage</th>
-              <th>Latest Vitals</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="patient-records-list">
-            <!-- Dynamically populated from localStorage & mock data -->
-          </tbody>
-        </table>
+      <!-- PATIENT VIEW: Privacy Shield & Personal Pass Only (Details visible ONLY to Facility) -->
+      <div id="patient-privacy-view" style="display: none;">
+        <div class="card" style="border-left: 6px solid #0d9488; background: #f0fdfa; margin-bottom: 24px;">
+          <div style="display: flex; gap: 16px; align-items: flex-start;">
+            <div style="font-size: 2.5rem; line-height: 1;">🛡️</div>
+            <div>
+              <h3 style="color: #0f766e; margin-bottom: 6px;">Patient Confidentiality & Data Privacy Protected</h3>
+              <p style="color: #334155; margin: 0; line-height: 1.5; font-size: 0.95rem;">
+                In strict compliance with healthcare confidentiality regulations, general patient records, identities, weights, contact numbers, and medical conditions are <strong>only visible to verified healthcare facility staff</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div id="patient-self-record-container">
+          <!-- Populated dynamically with patient's own token & appointment details -->
+        </div>
       </div>
     </section>
 
@@ -688,51 +717,72 @@
           <button class="btn btn-primary" onclick="chikitsaApp.exportDatabaseJSON()">
             📥 Download Database (JSON)
           </button>
+          <button class="btn btn-secondary" onclick="chikitsaApp.exportPatientsCSV()">
+            📊 Export Patient Records (CSV)
+          </button>
           <button class="btn btn-secondary" onclick="chikitsaApp.copyDatabaseJSON()">
-            📋 Copy JSON Data
+            📋 Copy JSON
           </button>
         </div>
       </div>
 
-      <!-- Database Statistics & Search Filter -->
-      <div class="card" style="margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <span style="font-weight: 700; color: var(--text-muted);">Total Stored Records:</span>
-            <span id="db-total-count" class="badge badge-blue" style="font-size: 1rem;">0</span>
-          </div>
-
-          <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; max-width: 650px;">
-            <select id="db-filter-category" class="form-control" style="width: auto; max-width: 220px;" onchange="chikitsaApp.renderDatabaseTable()">
-              <option value="ALL">All Categories (All Inputs)</option>
-              <option value="PATIENT_REGISTRATION">Patient Registrations</option>
-              <option value="QUEUE_TOKEN">Queue Tokens</option>
-              <option value="TRIAGE_CHECK">Triage Evaluations</option>
-              <option value="WORKER_AUTH">Staff Verifications</option>
-              <option value="TELE_PRESCRIPTION">Prescriptions</option>
-              <option value="BED_UPDATE">Bed Capacity Changes</option>
-            </select>
-            <input type="text" id="db-search-input" class="form-control" placeholder="Search any patient, token, doctor, or keyword..." oninput="chikitsaApp.renderDatabaseTable()" style="flex: 1;">
-          </div>
+      <!-- PATIENT RESTRICTED ACCESS NOTICE -->
+      <div id="patient-database-restricted" style="display: none;">
+        <div class="card" style="border-left: 6px solid #6366f1; background: #eef2ff; text-align: center; padding: 40px 24px;">
+          <div style="font-size: 3rem; margin-bottom: 12px;">🔒</div>
+          <h3 style="color: #4338ca; margin-bottom: 8px;">Healthcare Worker Credentials Required</h3>
+          <p style="color: #475569; max-width: 580px; margin: 0 auto 20px auto; font-size: 0.95rem; line-height: 1.5;">
+            The Central Database Repository contains facility audits, department transaction streams, and clinical records. Access is restricted to authorized PHC workers and hospital staff.
+          </p>
+          <button class="btn btn-primary btn-lg" onclick="document.getElementById('modal-role').style.display='flex'">
+            👨‍⚕️ Switch to Hospital Staff & Sign In
+          </button>
         </div>
       </div>
 
-      <!-- Database Audit Table -->
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Log ID</th>
-              <th>Timestamp</th>
-              <th>Input Category</th>
-              <th>Actor / Submitter</th>
-              <th>Recorded Summary & Payload</th>
-            </tr>
-          </thead>
-          <tbody id="database-records-list">
-            <!-- Dynamically populated from central database in app.js -->
-          </tbody>
-        </table>
+      <!-- WORKER FULL DATABASE VIEW -->
+      <div id="worker-database-view">
+        <!-- Database Statistics & Search Filter -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span style="font-weight: 700; color: var(--text-muted);">Total Stored Records:</span>
+              <span id="db-total-count" class="badge badge-blue" style="font-size: 1rem;">0</span>
+              <span class="badge badge-green" style="font-size: 0.8rem;">Live Disk Sync: database.json</span>
+            </div>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; max-width: 650px;">
+              <select id="db-filter-category" class="form-control" style="width: auto; max-width: 220px;" onchange="chikitsaApp.renderDatabaseTable()">
+                <option value="ALL">All Categories (All Inputs)</option>
+                <option value="PATIENT_REGISTRATION">Patient Registrations</option>
+                <option value="QUEUE_TOKEN">Queue Tokens</option>
+                <option value="TRIAGE_CHECK">Triage Evaluations</option>
+                <option value="WORKER_AUTH">Staff Verifications</option>
+                <option value="TELE_PRESCRIPTION">Prescriptions</option>
+                <option value="BED_UPDATE">Bed Capacity Changes</option>
+              </select>
+              <input type="text" id="db-search-input" class="form-control" placeholder="Search any patient, token, doctor, or keyword..." oninput="chikitsaApp.renderDatabaseTable()" style="flex: 1;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Database Audit Table -->
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Log ID</th>
+                <th>Timestamp</th>
+                <th>Input Category</th>
+                <th>Actor / Submitter</th>
+                <th>Recorded Summary & Payload</th>
+              </tr>
+            </thead>
+            <tbody id="database-records-list">
+              <!-- Dynamically populated from central database in app.js -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -874,55 +924,64 @@
     </div>
   </div>
 
-  <!-- ==================== REGISTER PATIENT MODAL ==================== -->
+  <!-- ==================== REGISTER PATIENT / TAKE OPD TOKEN MODAL ==================== -->
   <div id="modal-add-patient" class="modal-backdrop" style="display: none;">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3 data-i18n="registerPatient">Register New Patient</h3>
+        <h3 id="modal-pat-title">📅 Take OPD Token & Book Appointment</h3>
         <button id="btn-close-add-patient" class="modal-close">&times;</button>
       </div>
       <form id="add-patient-form">
         <div class="modal-body">
+          <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 14px;">
+            Please enter patient demographics and appointment reason. A live OPD token will be generated automatically.
+          </p>
+
+          <!-- 1. Name & 2. Age -->
           <div class="grid-2">
             <div class="form-group">
               <label for="pat-name">Patient Full Name *</label>
-              <input type="text" id="pat-name" class="form-control" required placeholder="e.g. Balaram Naik">
+              <input type="text" id="pat-name" class="form-control" required placeholder="Enter Patient Full Name">
             </div>
             <div class="form-group">
               <label for="pat-age">Age (Years) *</label>
-              <input type="number" id="pat-age" class="form-control" required min="0" max="120" placeholder="e.g. 42">
+              <input type="number" id="pat-age" class="form-control" required min="0" max="120" placeholder="e.g. 38">
             </div>
           </div>
 
+          <!-- 3. Gender & 4. Weight -->
           <div class="grid-2">
             <div class="form-group">
-              <label for="pat-gender">Gender</label>
-              <select id="pat-gender" class="form-control">
+              <label for="pat-gender">Gender *</label>
+              <select id="pat-gender" class="form-control" required>
                 <option value="Female">Female</option>
                 <option value="Male">Male</option>
                 <option value="Other">Other</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="pat-mobile">Mobile Number *</label>
+              <label for="pat-weight">Weight (kg) *</label>
+              <input type="number" id="pat-weight" class="form-control" required min="1" max="300" step="0.5" placeholder="e.g. 58">
+            </div>
+          </div>
+
+          <!-- 5. Village & 6. Phone Number -->
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="pat-village">Village / Mandal *</label>
+              <input type="text" id="pat-village" class="form-control" required placeholder="e.g. Kothapalli Sub-centre">
+            </div>
+            <div class="form-group">
+              <label for="pat-mobile">Phone Number *</label>
               <input type="tel" id="pat-mobile" class="form-control" required placeholder="e.g. 9848012345">
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="pat-village">Village / Mandal</label>
-            <input type="text" id="pat-village" class="form-control" placeholder="e.g. Kothapalli Sub-centre, Ward 2">
-          </div>
-
-          <div class="form-group">
-            <label for="pat-condition">Symptoms / Reason for Appointment *</label>
-            <textarea id="pat-condition" class="form-control" rows="2" required placeholder="Describe symptoms or reason for visit (e.g. Chest pain with sweating, OR High fever for 3 days, OR Routine blood pressure checkup)..."></textarea>
-          </div>
-
+          <!-- 7. Blood Group & AI Triage Output -->
           <div class="grid-2">
             <div class="form-group">
-              <label for="pat-bloodgroup">Blood Group</label>
-              <select id="pat-bloodgroup" class="form-control">
+              <label for="pat-bloodgroup">Blood Group *</label>
+              <select id="pat-bloodgroup" class="form-control" required>
                 <option value="O+">O+</option>
                 <option value="A+">A+</option>
                 <option value="B+">B+</option>
@@ -943,8 +1002,14 @@
             </div>
           </div>
 
+          <!-- 8. Reason for Appointment (Triggers AI Triage) -->
+          <div class="form-group">
+            <label for="pat-condition">Reason for the Appointment / Symptoms *</label>
+            <textarea id="pat-condition" class="form-control" rows="2" required placeholder="Describe symptoms or visit reason (e.g. Chest pain with sweating, OR High fever for 3 days, OR Routine blood pressure checkup)..."></textarea>
+          </div>
+
           <!-- AI Clinical Reasoning Card -->
-          <div id="ai-triage-assessment-card" style="background: #f0fdfa; border: 1px solid #0d9488; border-radius: 8px; padding: 12px; margin-top: 6px;">
+          <div id="ai-triage-assessment-card" style="background: #f0fdfa; border: 1px solid #0d9488; border-radius: 8px; padding: 12px; margin-top: 4px;">
             <strong style="color: #0f766e; font-size: 0.85rem; display: block; margin-bottom: 2px;">
               🤖 Chikitsa AI Real-time Triage Engine:
             </strong>
@@ -956,7 +1021,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-add-patient').style.display='none'" data-i18n="cancelBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary" data-i18n="submitBtn">Save & View In Records</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-patient" data-i18n="confirmAndSubmit">Confirm and Submit</button>
         </div>
       </form>
     </div>

@@ -1,4 +1,4 @@
-// ChikitsaConnect - Rural Healthcare Platform
+﻿// ChikitsaConnect - Rural Healthcare Platform
 // Core Application Logic: Tri-lingual localization, Role-based access, Button-driven AI Assistant, and 9 Modules
 
 // TRANSLATIONS DICTIONARY (English, Telugu, Hindi)
@@ -211,6 +211,7 @@ class ChikitsaApp {
 
     this.bindGlobalEvents();
     this.bindPatientTriageAI();
+    this.startQueueTimer(); // Live 1-second reducing countdown
     this.renderActiveTab();
     this.renderQueueBoard();
     this.renderPatientRecords();
@@ -273,6 +274,9 @@ class ChikitsaApp {
     this.applyRolePermissions();
     this.updateRoleBadgeUI();
     this.renderFacilityDashboard();
+    this.renderPatientRecords();
+    this.renderQueueBoard();
+    this.renderDatabaseTable();
   }
 
   applyRolePermissions() {
@@ -444,10 +448,13 @@ class ChikitsaApp {
         const pinInput = document.getElementById("worker-pin-input");
         const errBox = document.getElementById("worker-auth-error");
 
-        const hospital = (hospInput ? hospInput.value : "").trim().toUpperCase();
-        const rawName = (nameInput ? nameInput.value : "").trim();
-        const nameUpper = rawName.toUpperCase();
-        const dept = (deptInput ? deptInput.value : "").trim().toUpperCase();
+        // Robust case-insensitivity: accept lower, upper, or mixed case (e.g. "abcd hospital", "keerthi", "oncology")
+        const hospital = (hospInput ? hospInput.value : "").replace(/\s+/g, ' ').trim().toUpperCase();
+        let rawName = (nameInput ? nameInput.value : "").replace(/\s+/g, ' ').trim().toUpperCase();
+        if (rawName.startsWith("DR.") || rawName.startsWith("DR ")) {
+          rawName = rawName.replace(/^DR\.?\s*/, "").trim();
+        }
+        const dept = (deptInput ? deptInput.value : "").replace(/\s+/g, ' ').trim().toUpperCase();
         const pin = (pinInput ? pinInput.value : "").trim();
 
         if (errBox) {
@@ -455,23 +462,23 @@ class ChikitsaApp {
           errBox.innerHTML = "";
         }
 
-        // Strict Department Mapping as specified:
+        // Strict Department Mapping (Accepts both British/American spellings in any case):
         // KANISHQ -> NEUROLOGY
         // LIKITH -> CARDIOLOGY
-        // HARISH -> ORTHOPAEDICS / ORTHOPAEDICES
-        // KAARTHIKEYA -> PAEDIATRICS
-        // AADHYA -> GYNAECOLOGY
+        // HARISH -> ORTHOPAEDICS / ORTHOPEDICS
+        // KAARTHIKEYA -> PAEDIATRICS / PEDIATRICS
+        // AADHYA -> GYNAECOLOGY / GYNECOLOGY
         // KEERTHI -> ONCOLOGY
         const VALID_STAFF_MAP = {
           "KANISHQ": ["NEUROLOGY"],
           "LIKITH": ["CARDIOLOGY"],
-          "HARISH": ["ORTHOPAEDICS", "ORTHOPAEDICES"],
-          "KAARTHIKEYA": ["PAEDIATRICS"],
-          "AADHYA": ["GYNAECOLOGY"],
+          "HARISH": ["ORTHOPAEDICS", "ORTHOPAEDICES", "ORTHOPEDICS"],
+          "KAARTHIKEYA": ["PAEDIATRICS", "PEDIATRICS"],
+          "AADHYA": ["GYNAECOLOGY", "GYNECOLOGY"],
           "KEERTHI": ["ONCOLOGY"]
         };
 
-        const allowedDepts = VALID_STAFF_MAP[nameUpper];
+        const allowedDepts = VALID_STAFF_MAP[rawName];
         const isHospitalValid = hospital === "ABCD HOSPITAL";
         const isPinValid = pin === "2026";
         const isStaffValid = !!allowedDepts;
@@ -487,7 +494,7 @@ class ChikitsaApp {
         }
 
         // Authentication Successful!
-        const capitalizedName = "Dr. " + nameUpper.charAt(0) + nameUpper.slice(1).toLowerCase();
+        const capitalizedName = "Dr. " + rawName.charAt(0) + rawName.slice(1).toLowerCase();
         this.setRole("worker", {
           name: capitalizedName,
           hospital: "ABCD HOSPITAL",
@@ -495,7 +502,7 @@ class ChikitsaApp {
         });
 
         // Mark this doctor as logged in so patient can see they are available!
-        this.markDoctorLoggedIn(nameUpper, dept);
+        this.markDoctorLoggedIn(rawName, dept);
 
         // Log to Central Database
         this.logToDatabase(
@@ -671,28 +678,53 @@ class ChikitsaApp {
     }
   }
 
-  // MODULE 2: APPOINTMENT & QUEUE
+  // MODULE 2: APPOINTMENT & QUEUE (Live 1-second reducing countdown timer & privacy masking)
   renderQueueBoard() {
     const listEl = document.getElementById("queue-tokens-list");
     if (!listEl) return;
 
     listEl.innerHTML = "";
-    this.data.queue.forEach((item, idx) => {
-      const isServing = item.status === "Serving";
+    const isWorker = this.role === "worker";
+
+    this.data.queue.forEach((item) => {
+      const isServing = item.status === "Serving" || item.waitSeconds <= 0;
+      const isMyToken = item.token === this.userToken;
+
+      // Patient Privacy Shield: In patient mode, mask other patients' names so patient details are strictly visible to the facility only!
+      let displayName = item.patientName;
+      if (!isWorker && !isMyToken) {
+        displayName = `Patient (${item.token})`;
+      }
+
       const tr = document.createElement("tr");
+      if (isMyToken) {
+        tr.style.background = "#f0fdf4";
+        tr.style.borderLeft = "4px solid #16a34a";
+      }
+
       tr.innerHTML = `
-        <td><strong>${item.token}</strong></td>
-        <td>${item.patientName}</td>
+        <td>
+          <strong>${item.token}</strong>
+          ${isMyToken ? '<span class="badge badge-green" style="margin-left:4px; font-size:0.75rem;">You</span>' : ''}
+        </td>
+        <td>
+          <strong>${displayName}</strong>
+          ${!isWorker && !isMyToken ? '<span title="Patient details visible only to facility" style="font-size:0.75rem; color:#94a3b8; margin-left:4px;">ðŸ”’ Protected</span>' : ''}
+        </td>
         <td>${item.department}</td>
-        <td>${item.doctor}</td>
+        <td><strong>${item.doctor}</strong></td>
         <td>${item.room}</td>
         <td>
           <span class="badge ${isServing ? 'badge-green' : 'badge-yellow'}">
-            ${isServing ? (this.lang === 'te' ? 'సేవలో ఉంది' : this.lang === 'hi' ? 'प्रगति पर' : 'Serving') : 
-                          (this.lang === 'te' ? 'వేచి ఉంది' : this.lang === 'hi' ? 'प्रतीक्षारत' : 'Waiting')}
+            ${isServing ? (this.lang === 'te' ? 'à°¸à±‡à°µà°²à±‹ à°‰à°‚à°¦à°¿' : this.lang === 'hi' ? 'à¤ªà¥à¤°à¤—à¤¤à¤¿ à¤ªà¤°' : 'Serving') : 
+                          (this.lang === 'te' ? 'à°µà±‡à°šà°¿ à°‰à°‚à°¦à°¿' : this.lang === 'hi' ? 'à¤ªà¥à¤°à¤¤à¥€à¤•à¥à¤·à¤¾à¤°à¤¤' : 'Waiting')}
           </span>
         </td>
-        <td>${item.waitMins === 0 ? '-' : `~${item.waitMins} min`}</td>
+        <td>
+          <span class="queue-countdown" data-token="${item.token}" style="font-weight:700; font-family:monospace; font-size:1rem; color:${isServing ? '#16a34a' : '#d97706'};">
+            ${this.formatWaitTime(item.waitSeconds, isServing)}
+          </span>
+        </td>
       `;
       listEl.appendChild(tr);
     });
@@ -707,43 +739,109 @@ class ChikitsaApp {
     if (myTokenEl) {
       myTokenEl.textContent = this.userToken;
     }
+
+    const myTokenDocInfo = document.getElementById("my-token-doc-info");
+    if (myTokenDocInfo) {
+      const myItem = this.data.queue.find(q => q.token === this.userToken);
+      if (myItem) {
+        myTokenDocInfo.textContent = `Doctor: ${myItem.doctor} (${myItem.room})`;
+      } else {
+        myTokenDocInfo.textContent = `Doctor: Dr. Keerthi (Room 106)`;
+      }
+    }
+
+    this.updateBoardWaitSummary();
+  }
+
+  // Format seconds into live mm:ss countdown display
+  formatWaitTime(seconds, isServing) {
+    if (isServing || seconds === undefined || seconds === null || seconds <= 0) {
+      return "00:00 (Serving)";
+    }
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+  }
+
+  // Live Timer: Decrements wait time every second (1000ms)
+  startQueueTimer() {
+    if (this.queueTimerInterval) {
+      clearInterval(this.queueTimerInterval);
+    }
+    this.queueTimerInterval = setInterval(() => {
+      this.tickQueueTimer();
+    }, 1000);
+  }
+
+  tickQueueTimer() {
+    let hasUpdated = false;
+    this.data.queue.forEach(item => {
+      if (item.status !== "Serving" && item.waitSeconds && item.waitSeconds > 0) {
+        item.waitSeconds -= 1;
+        item.waitMins = Math.ceil(item.waitSeconds / 60);
+        if (item.waitSeconds === 0) {
+          item.status = "Serving";
+        }
+        hasUpdated = true;
+      }
+    });
+
+    // Real-time DOM updates for every countdown element across the table
+    document.querySelectorAll(".queue-countdown").forEach(el => {
+      const token = el.dataset.token;
+      const item = this.data.queue.find(q => q.token === token);
+      if (item) {
+        const isServing = item.status === "Serving" || item.waitSeconds <= 0;
+        el.textContent = this.formatWaitTime(item.waitSeconds, isServing);
+        el.style.color = isServing ? '#16a34a' : '#d97706';
+      }
+    });
+
+    this.updateBoardWaitSummary();
+  }
+
+  updateBoardWaitSummary() {
+    const boardEstWait = document.getElementById("queue-board-est-wait");
+    const aheadCount = document.getElementById("queue-board-ahead-count");
+    if (!boardEstWait) return;
+
+    const myItem = this.data.queue.find(q => q.token === this.userToken);
+    if (myItem) {
+      const isServing = myItem.status === "Serving" || myItem.waitSeconds <= 0;
+      boardEstWait.textContent = this.formatWaitTime(myItem.waitSeconds, isServing);
+      if (aheadCount) {
+        const myIdx = this.data.queue.findIndex(q => q.token === this.userToken);
+        const waitingAhead = myIdx > 0 ? myIdx : 0;
+        aheadCount.textContent = isServing ? "ðŸŽ‰ Now Serving Your Token!" : `â±ï¸ ${waitingAhead} patient${waitingAhead === 1 ? '' : 's'} ahead of you`;
+      }
+    } else {
+      const nextWaiting = this.data.queue.find(q => q.status === "Waiting" && q.waitSeconds > 0);
+      if (nextWaiting) {
+        boardEstWait.textContent = this.formatWaitTime(nextWaiting.waitSeconds, false);
+        if (aheadCount) aheadCount.textContent = `â±ï¸ Live Countdown (Next: ${nextWaiting.token})`;
+      } else {
+        boardEstWait.textContent = "00:00 (Ready)";
+        if (aheadCount) aheadCount.textContent = "No wait time right now";
+      }
+    }
   }
 
   handleGenerateToken() {
-    const patientName = prompt(this.lang === 'te' ? "రోగి పేరు నమోదు చేయండి:" : this.lang === 'hi' ? "मरीज का नाम दर्ज करें:" : "Enter patient name for new token:") || "Rural Patient";
-    const nextNum = this.data.queue.length + 15;
-    const newTokenId = `OPD-0${nextNum}`;
-    const wait = (this.data.queue.length - 1) * 7;
-
-    const newEntry = {
-      token: newTokenId,
-      patientName: patientName,
-      department: "General OPD",
-      doctor: "Dr. Sunitha Rao (MO)",
-      room: "Room 1",
-      status: "Waiting",
-      waitMins: wait
-    };
-
-    this.data.queue.push(newEntry);
-    this.userToken = newTokenId;
-    localStorage.setItem("chikitsa_my_token", newTokenId);
-    this.saveData("queue");
-    this.renderQueueBoard();
-
-    // Log to Central Database
-    this.logToDatabase(
-      "QUEUE_TOKEN",
-      "OPD Token Kiosk",
-      `New OPD Token generated: ${newTokenId} for "${patientName}" (Wait: ~${wait}m, Room: Room 1)`,
-      newEntry
-    );
-
-    const successMsg = this.lang === 'te' ? 
-      `మీ టోకెన్ ${newTokenId} విజయవంతంగా జనరేట్ అయ్యింది! సుమారు నిరీక్షణ సమయం: ${wait} నిమిషాలు.` : 
-      `Your token ${newTokenId} has been generated! Estimated wait: ~${wait} mins.`;
-    alert(successMsg);
-    this.speakText(successMsg);
+    // Open the comprehensive 8-field OPD Booking modal (Name, Age, Gender, Weight, Village, Phone, Blood Group, Reason)
+    const modal = document.getElementById("modal-add-patient");
+    const title = document.getElementById("modal-pat-title");
+    if (title) {
+      title.textContent = this.lang === 'te' ? "ðŸ“… à°•à±Šà°¤à±à°¤ OPD à°Ÿà±‹à°•à±†à°¨à± & à°…à°ªà°¾à°¯à°¿à°‚à°Ÿà±â€Œà°®à±†à°‚à°Ÿà± à°¤à±€à°¸à±à°•à±‹à°‚à°¡à°¿" :
+                         this.lang === 'hi' ? "ðŸ“… à¤¨à¤¯à¤¾ OPD à¤Ÿà¥‹à¤•à¤¨ à¤µ à¤…à¤ªà¥‰à¤‡à¤‚à¤Ÿà¤®à¥‡à¤‚à¤Ÿ à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚" :
+                         "ðŸ“… Take OPD Token & Book Appointment";
+    }
+    if (modal) {
+      modal.style.display = "flex";
+      setTimeout(() => {
+        const nameInput = document.getElementById("pat-name");
+        if (nameInput) nameInput.focus();
+      }, 100);
+    }
   }
 
   // MODULE 3: DIGITAL TRIAGE
@@ -831,68 +929,157 @@ class ChikitsaApp {
     });
   }
 
-  // MODULE 4: PATIENT RECORDS (Live updates & instant visibility)
+  // MODULE 4: PATIENT RECORDS (Facility-Only Privacy Guard & 8-Field Registration)
   renderPatientRecords(searchFilter = "") {
-    const listEl = document.getElementById("patient-records-list");
-    const countEl = document.getElementById("total-patients-count");
-    if (!listEl) return;
+    const isWorker = this.role === "worker";
+    const workerView = document.getElementById("worker-records-view");
+    const patientView = document.getElementById("patient-privacy-view");
+    const openAddBtn = document.getElementById("btn-open-add-patient");
 
-    listEl.innerHTML = "";
+    if (isWorker) {
+      if (workerView) workerView.style.display = "block";
+      if (patientView) patientView.style.display = "none";
+      if (openAddBtn) openAddBtn.style.display = "inline-flex";
 
-    const filtered = this.data.patients.filter(p => {
-      if (!searchFilter) return true;
-      const combined = `${p.name} ${p.village} ${p.condition} ${p.abhaId} ${p.mobile}`.toLowerCase();
-      return combined.includes(searchFilter);
-    });
+      const listEl = document.getElementById("patient-records-list");
+      const countEl = document.getElementById("total-patients-count");
+      if (!listEl) return;
 
-    if (countEl) {
-      countEl.textContent = this.data.patients.length;
+      listEl.innerHTML = "";
+      const filtered = this.data.patients.filter(p => {
+        if (!searchFilter) return true;
+        const combined = `${p.name} ${p.village} ${p.condition} ${p.abhaId} ${p.mobile} ${p.weight || ''}`.toLowerCase();
+        return combined.includes(searchFilter);
+      });
+
+      if (countEl) countEl.textContent = this.data.patients.length;
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">
+          ${this.lang === 'te' ? 'à° à°°à±‹à°—à°¿ à°°à°¿à°•à°¾à°°à±à°¡à±à°²à± à°•à°¨à°¿à°ªà°¿à°‚à°šà°²à±‡à°¦à±' : this.lang === 'hi' ? 'à¤•à¥‹à¤ˆ à¤®à¤°à¥€à¤œ à¤°à¤¿à¤•à¥‰à¤°à¥à¤¡ à¤¨à¤¹à¥€à¤‚ à¤®à¤¿à¤²à¤¾' : 'No patient records found matching search.'}
+        </td></tr>`;
+        return;
+      }
+
+      filtered.forEach(p => {
+        const triageBadge = p.triageStatus === "Red" ? "badge-red" : p.triageStatus === "Yellow" ? "badge-yellow" : "badge-green";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>
+            <strong>${p.id}</strong>
+            ${p.token ? `<br><span class="badge badge-blue" style="margin-top:2px;">ðŸŽŸï¸ ${p.token}</span>` : ''}
+            <br><small style="color:#64748b;">${p.abhaId || ''}</small>
+          </td>
+          <td>
+            <strong>${p.name}</strong><br>
+            <small>${p.age} yrs &bull; ${p.gender} &bull; Blood: <strong>${p.bloodGroup || 'O+'}</strong></small>
+          </td>
+          <td>
+            <strong>âš–ï¸ ${p.weight || '55 kg'}</strong><br>
+            <small>ðŸ“ž ${p.mobile}</small><br>
+            <small style="color:#64748b;">ðŸ“ ${p.village}</small>
+          </td>
+          <td>
+            <div style="font-weight:600; color:#1e293b;">${p.condition}</div>
+          </td>
+          <td><span class="badge ${triageBadge}">${p.triageStatus || 'Normal'}</span></td>
+          <td>
+            <small>BP: ${p.lastVitals ? p.lastVitals.bp : '120/80'}<br>SpO2: ${p.lastVitals ? p.lastVitals.spO2 : '98%'}</small>
+          </td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="window.chikitsaApp.viewPatientCard('${p.id}')">
+              ðŸ“‹ ${this.lang === 'te' ? 'à°•à°¾à°°à±à°¡à±' : this.lang === 'hi' ? 'à¤•à¤¾à¤°à¥à¤¡' : 'Card'}
+            </button>
+          </td>
+        `;
+        listEl.appendChild(tr);
+      });
+    } else {
+      // Patient Mode: Patient details must ONLY be visible for the facility!
+      if (workerView) workerView.style.display = "none";
+      if (patientView) patientView.style.display = "block";
+      if (openAddBtn) openAddBtn.style.display = "none";
+
+      const selfContainer = document.getElementById("patient-self-record-container");
+      if (!selfContainer) return;
+
+      const myPatient = this.data.patients.find(p => p.token === this.userToken) || this.data.patients[0];
+
+      if (this.userToken && myPatient) {
+        selfContainer.innerHTML = `
+          <div class="card" style="border: 2px solid #0d9488; background: #ffffff; border-radius: 12px; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ccfbf1; padding-bottom: 14px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <span class="badge badge-green" style="font-size: 0.85rem; margin-bottom: 6px;">Your Registered Patient Pass</span>
+                <h3 style="color: #0f766e; margin: 0;">${myPatient.name}</h3>
+                <small style="color: #64748b;">Patient ID: ${myPatient.id} &bull; ${myPatient.abhaId || 'ABHA Registered'}</small>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 2rem; font-weight: 800; color: #0d9488;">ðŸŽŸï¸ ${myPatient.token || this.userToken}</div>
+                <small style="color: #64748b;">Registered: ${myPatient.registeredAt || 'Today'}</small>
+              </div>
+            </div>
+
+            <div class="grid-3" style="margin-bottom: 16px;">
+              <div style="background: #f8fafc; padding: 12px; border-radius: 8px;">
+                <span style="font-size: 0.8rem; color: #64748b; text-transform: uppercase;">Demographics</span>
+                <div style="font-weight: 700; color: #1e293b; margin-top: 4px;">${myPatient.age} yrs &bull; ${myPatient.gender}</div>
+              </div>
+              <div style="background: #f8fafc; padding: 12px; border-radius: 8px;">
+                <span style="font-size: 0.8rem; color: #64748b; text-transform: uppercase;">Weight & Blood Group</span>
+                <div style="font-weight: 700; color: #1e293b; margin-top: 4px;">âš–ï¸ ${myPatient.weight || '58 kg'} &bull; ðŸ©¸ ${myPatient.bloodGroup || 'O+'}</div>
+              </div>
+              <div style="background: #f8fafc; padding: 12px; border-radius: 8px;">
+                <span style="font-size: 0.8rem; color: #64748b; text-transform: uppercase;">Village / Mandal</span>
+                <div style="font-weight: 700; color: #1e293b; margin-top: 4px;">ðŸ“ ${myPatient.village || 'Rural Sub-centre'}</div>
+              </div>
+            </div>
+
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+              <div style="font-weight: 700; color: #166534; margin-bottom: 4px;">Reason for Appointment:</div>
+              <div style="color: #1e293b;">${myPatient.condition}</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <button class="btn btn-primary" onclick="chikitsaApp.switchTab('queue')">
+                â±ï¸ Track Live Queue Wait Time
+              </button>
+              <button class="btn btn-secondary" onclick="window.chikitsaApp.viewPatientCard('${myPatient.id}')">
+                ðŸ–¨ï¸ View & Print My Health Card
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        selfContainer.innerHTML = `
+          <div class="card" style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 3rem; margin-bottom: 12px;">ðŸ¥</div>
+            <h3>No Active Patient Token Found</h3>
+            <p style="color: #64748b; max-width: 500px; margin: 0 auto 20px auto;">
+              Take a live OPD token by providing your basic details and symptom reason. Your private health pass will appear here.
+            </p>
+            <button class="btn btn-primary btn-lg" onclick="chikitsaApp.handleGenerateToken()">
+              âž• Take New OPD Token
+            </button>
+          </div>
+        `;
+      }
     }
-
-    if (filtered.length === 0) {
-      listEl.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">
-        ${this.lang === 'te' ? 'ఏ రోగి రికార్డులు కనిపించలేదు' : this.lang === 'hi' ? 'कोई मरीज रिकॉर्ड नहीं मिला' : 'No patient records found matching search.'}
-      </td></tr>`;
-      return;
-    }
-
-    filtered.forEach(p => {
-      const triageBadge = p.triageStatus === "Red" ? "badge-red" : p.triageStatus === "Yellow" ? "badge-yellow" : "badge-green";
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>
-          <strong>${p.id}</strong>
-          ${p.token ? `<br><span class="badge badge-blue" style="margin-top:2px;">🎟️ ${p.token}</span>` : ''}
-          <br><small style="color:#64748b;">${p.abhaId || ''}</small>
-        </td>
-        <td><strong>${p.name}</strong><br><small>${p.age}y / ${p.gender}</small></td>
-        <td>${p.mobile}<br><small style="color:#64748b;">${p.village}</small></td>
-        <td>${p.condition}</td>
-        <td><span class="badge ${triageBadge}">${p.triageStatus || 'Normal'}</span></td>
-        <td>
-          <small>BP: ${p.lastVitals ? p.lastVitals.bp : '120/80'} | SpO2: ${p.lastVitals ? p.lastVitals.spO2 : '98%'}</small>
-        </td>
-        <td>
-          <button class="btn btn-secondary btn-sm" onclick="window.chikitsaApp.viewPatientCard('${p.id}')">
-            📋 ${this.lang === 'te' ? 'కార్డ్' : this.lang === 'hi' ? 'कार्ड' : 'Card'}
-          </button>
-        </td>
-      `;
-      listEl.appendChild(tr);
-    });
   }
 
+  // 8-Field OPD Booking & Patient Creation (Name, Age, Gender, Weight, Village, Phone, Blood Group, Reason)
   handleCreatePatient() {
-    const name = document.getElementById("pat-name").value.trim();
-    const age = document.getElementById("pat-age").value.trim();
-    const gender = document.getElementById("pat-gender").value;
-    const mobile = document.getElementById("pat-mobile").value.trim();
-    const village = document.getElementById("pat-village").value.trim();
-    const condition = document.getElementById("pat-condition").value.trim();
-    const bloodGroup = document.getElementById("pat-bloodgroup").value;
+    const name = (document.getElementById("pat-name")?.value || "").trim();
+    const age = (document.getElementById("pat-age")?.value || "").trim();
+    const gender = document.getElementById("pat-gender")?.value || "Female";
+    const weight = (document.getElementById("pat-weight")?.value || "").trim();
+    const village = (document.getElementById("pat-village")?.value || "").trim();
+    const mobile = (document.getElementById("pat-mobile")?.value || "").trim();
+    const bloodGroup = document.getElementById("pat-bloodgroup")?.value || "O+";
+    const condition = (document.getElementById("pat-condition")?.value || "").trim();
 
-    if (!name || !age || !mobile) {
-      alert("Please fill required fields (Name, Age, Mobile).");
+    if (!name || !age || !gender || !weight || !village || !mobile || !bloodGroup || !condition) {
+      alert("Please enter all 8 required fields:\n1. Name\n2. Age\n3. Gender\n4. Weight\n5. Village\n6. Phone Number\n7. Blood Group\n8. Reason for Appointment");
       return;
     }
 
@@ -903,10 +1090,11 @@ class ChikitsaApp {
     const assignedDoc = aiAssessment.doctor;
     const assignedRoom = aiAssessment.room;
 
-    // Calculate automatic Token and Queue assignment
+    // Calculate automatic Token and Queue assignment with reducing wait seconds
     const nextQueueNum = this.data.queue.length + 15;
     const newTokenId = `OPD-0${nextQueueNum}`;
-    const waitMins = triageStatus === "Red" ? 0 : Math.max(5, (this.data.queue.length - 1) * 7);
+    const waitSeconds = triageStatus === "Red" ? 0 : Math.max(300, this.data.queue.length * 360);
+    const waitMins = Math.ceil(waitSeconds / 60);
 
     const nextId = `PAT-${1000 + this.data.patients.length + 1}`;
     const newPat = {
@@ -914,9 +1102,10 @@ class ChikitsaApp {
       name: name,
       age: parseInt(age),
       gender: gender,
+      weight: `${weight} kg`,
       mobile: mobile,
-      village: village || "Rural Sub-centre",
-      condition: condition || "General Health Checkup",
+      village: village,
+      condition: condition,
       bloodGroup: bloodGroup,
       token: newTokenId,
       queuePosition: this.data.queue.length + 1,
@@ -930,15 +1119,16 @@ class ChikitsaApp {
     this.data.patients.unshift(newPat);
     this.saveData("patients");
 
-    // Automatically add to Queue roster
+    // Automatically add to Queue roster with live countdown seconds
     const queueEntry = {
       token: newTokenId,
       patientName: name,
       department: assignedDept,
       doctor: assignedDoc,
       room: assignedRoom,
-      status: "Waiting",
-      waitMins: waitMins
+      status: triageStatus === "Red" ? "Serving" : "Waiting",
+      waitMins: waitMins,
+      waitSeconds: waitSeconds
     };
     this.data.queue.push(queueEntry);
     this.userToken = newTokenId;
@@ -948,15 +1138,17 @@ class ChikitsaApp {
     // Log to Central Database
     this.logToDatabase(
       "PATIENT_REGISTRATION",
-      this.role === "worker" ? `${this.workerInfo.name || 'Staff'} (${this.workerInfo.department || 'Registration'})` : "OPD Registration Desk",
-      `New Patient Registered: "${name}" (${nextId}, ${age}y, ${gender}, ${village || 'Rural'}) with Auto Token ${newTokenId} (Dept: ${assignedDept}, ${assignedRoom})`,
+      this.role === "worker" ? `${this.workerInfo.name || 'Staff'} (${this.workerInfo.department || 'Registration'})` : "OPD Token Kiosk",
+      `New Patient Registered: "${name}" (${nextId}, ${age}y, ${gender}, ${weight}kg, ${village}) with Token ${newTokenId} assigned to ${assignedDoc} (${assignedRoom})`,
       {
         patientId: nextId,
         name: name,
         age: age,
         gender: gender,
-        mobile: mobile,
+        weight: `${weight} kg`,
         village: village,
+        mobile: mobile,
+        bloodGroup: bloodGroup,
         token: newTokenId,
         department: assignedDept,
         doctor: assignedDoc,
@@ -975,23 +1167,23 @@ class ChikitsaApp {
     document.getElementById("modal-add-patient").style.display = "none";
 
     const alertMsg = this.lang === 'te' ? 
-      `✅ రోగి "${name}" (${nextId}) విజయవంతంగా నమోదు చేయబడింది!\n\n🎟️ స్వయంచాలకంగా కేటాయించిన టోకెన్: ${newTokenId}\n📍 క్యూ స్థానం: #${queueEntry.waitMins > 0 ? this.data.queue.length : 1}\n⏱️ సుమారు నిరీక్షణ సమయం: ~${waitMins} నిమిషాలు\n👨‍⚕️ డాక్టర్: ${assignedDoc} (${assignedRoom})` :
+      `âœ… à°°à±‹à°—à°¿ "${name}" (${nextId}) à°µà°¿à°œà°¯à°µà°‚à°¤à°‚à°—à°¾ à°¨à°®à±‹à°¦à± à°šà±‡à°¯à°¬à°¡à°¿à°‚à°¦à°¿!\n\nðŸŽŸï¸ à°Ÿà±‹à°•à±†à°¨à±: ${newTokenId}\nâš–ï¸ à°¬à°°à±à°µà±: ${weight} kg\nðŸ“ à°—à±à°°à°¾à°®à°‚: ${village}\nâ±ï¸ à°¸à±à°®à°¾à°°à± à°¨à°¿à°°à±€à°•à±à°·à°£: ~${waitMins} à°¨à°¿à°®à°¿à°·à°¾à°²à± (à°²à±ˆà°µà± à°•à±Œà°‚à°Ÿà±â€Œà°¡à±Œà°¨à± à°¤à°—à±à°—à°¡à°‚ à°ªà±à°°à°¾à°°à°‚à°­à°®à±ˆà°‚à°¦à°¿)\nðŸ‘¨â€âš•ï¸ à°¡à°¾à°•à±à°Ÿà°°à±: ${assignedDoc} (${assignedRoom})` :
       this.lang === 'hi' ?
-      `✅ मरीज "${name}" (${nextId}) सफलतापूर्वक पंजीकृत!\n\n🎟️ स्वचालित रूप से आवंटित टोकन: ${newTokenId}\n📍 कतार में स्थान: #${this.data.queue.length}\n⏱️ अनुमानित प्रतीक्षा समय: ~${waitMins} मिनट\n👨‍⚕️ डॉक्टर: ${assignedDoc} (${assignedRoom})` :
-      `✅ Patient "${name}" (${nextId}) Registered Successfully!\n\n🎟️ Automatically Assigned Token: ${newTokenId}\n📍 Queue Position: #${this.data.queue.length}\n⏱️ Est. Wait Time: ~${waitMins} mins\n👨‍⚕️ Assigned Doctor: ${assignedDoc} (${assignedRoom})`;
+      `âœ… à¤®à¤°à¥€à¤œ "${name}" (${nextId}) à¤¸à¤«à¤²à¤¤à¤¾à¤ªà¥‚à¤°à¥à¤µà¤• à¤ªà¤‚à¤œà¥€à¤•à¥ƒà¤¤!\n\nðŸŽŸï¸ à¤Ÿà¥‹à¤•à¤¨: ${newTokenId}\nâš–ï¸ à¤µà¤œà¤¨: ${weight} kg\nðŸ“ à¤—à¤¾à¤à¤µ: ${village}\nâ±ï¸ à¤ªà¥à¤°à¤¤à¥€à¤•à¥à¤·à¤¾ à¤¸à¤®à¤¯: ~${waitMins} à¤®à¤¿à¤¨à¤Ÿ (à¤•à¤¾à¤‰à¤‚à¤Ÿà¤¡à¤¾à¤‰à¤¨ à¤¶à¥à¤°à¥‚)\nðŸ‘¨â€âš•ï¸ à¤¡à¥‰à¤•à¥à¤Ÿà¤°: ${assignedDoc} (${assignedRoom})` :
+      `âœ… Patient "${name}" (${nextId}) Registered Successfully!\n\nðŸŽŸï¸ OPD Token: ${newTokenId}\nâš–ï¸ Weight: ${weight} kg\nðŸ“ Village: ${village}\nâ±ï¸ Est. Wait: ~${waitMins} mins (Live 1s countdown started)\nðŸ‘¨â€âš•ï¸ Assigned Doctor: ${assignedDoc} (${assignedRoom})`;
 
     alert(alertMsg);
 
     // Speak out token assignment for rural accessibility
     const spokenVoiceMsg = this.lang === 'te' ? 
-      `రోగి వివరాలు నమోదయ్యాయి. మీకు కేటాయించిన టోకెన్ నంబర్ ${newTokenId}. నిరీక్షణ సమయం సుమారు ${waitMins} నిమిషాలు.` :
+      `à°°à±‹à°—à°¿ à°µà°¿à°µà°°à°¾à°²à± à°¨à°®à±‹à°¦à°¯à±à°¯à°¾à°¯à°¿. à°®à±€à°•à± à°•à±‡à°Ÿà°¾à°¯à°¿à°‚à°šà°¿à°¨ à°Ÿà±‹à°•à±†à°¨à± à°¨à°‚à°¬à°°à± ${newTokenId}. à°¡à°¾à°•à±à°Ÿà°°à± ${assignedDoc}.` :
       this.lang === 'hi' ?
-      `मरीज का विवरण दर्ज हो गया है। आपका टोकन नंबर ${newTokenId} है। प्रतीक्षा समय लगभग ${waitMins} मिनट है।` :
-      `Patient details registered. Your assigned OPD token number is ${newTokenId}. Estimated wait is ${waitMins} minutes.`;
+      `à¤®à¤°à¥€à¤œ à¤•à¤¾ à¤µà¤¿à¤µà¤°à¤£ à¤¦à¤°à¥à¤œ à¤¹à¥‹ à¤—à¤¯à¤¾ à¤¹à¥ˆà¥¤ à¤†à¤ªà¤•à¤¾ à¤Ÿà¥‹à¤•à¤¨ à¤¨à¤‚à¤¬à¤° ${newTokenId} à¤¹à¥ˆà¥¤ à¤¡à¥‰à¤•à¥à¤Ÿà¤° ${assignedDoc} à¤¹à¥ˆà¤‚à¥¤` :
+      `Patient registered. Your assigned OPD token number is ${newTokenId}. Assigned to doctor ${assignedDoc}.`;
     this.speakText(spokenVoiceMsg);
 
-    // Switch to records tab so user directly sees the updated record and token
-    this.switchTab("records");
+    // Switch to queue tab so user sees their own token and the live decreasing time!
+    this.switchTab("queue");
   }
 
   // AI-DRIVEN CLINICAL TRIAGE ENGINE
@@ -1007,20 +1199,11 @@ class ChikitsaApp {
       "eclampsia", "cyanosis", "shock", "choking", "severe accident", "collapse"
     ];
 
-    // Yellow Keywords: Urgent Doctor Review
-    const yellowKeywords = [
-      "high fever", "fever", "malaria", "dengue", "typhoid", "vomiting", "diarrhea",
-      "loose motion", "dehydration", "fracture", "severe pain", "abdominal pain",
-      "stomach pain", "appendix", "hypertension", "high bp", "diabetes", "high sugar",
-      "pregnancy", "swelling", "infection", "wound", "burn", "urinary infection", "stones",
-      "joint pain", "jaundice", "skin rash"
-    ];
-
     for (const kw of redKeywords) {
       if (text.includes(kw)) {
         return {
           level: "Red",
-          badgeText: "🔴 Critical Emergency (Red)",
+          badgeText: "ðŸ”´ Critical Emergency (Red)",
           badgeClass: "badge-red",
           rationale: `AI Detection: Critical presentation detected ("${kw}"). Immediate trauma/emergency intervention required.`,
           department: "Emergency & Trauma",
@@ -1030,11 +1213,102 @@ class ChikitsaApp {
       }
     }
 
+    // Oncology Keywords - Assigned to Dr. Keerthi
+    const oncologyKeywords = [
+      "cancer", "tumor", "tumour", "oncology", "chemo", "chemotherapy",
+      "lump", "malignancy", "biopsy", "radiation", "carcinoma", "growth"
+    ];
+    for (const kw of oncologyKeywords) {
+      if (text.includes(kw)) {
+        return {
+          level: "Yellow",
+          badgeText: "ðŸŸ¡ Oncology Specialist Review (Yellow)",
+          badgeClass: "badge-yellow",
+          rationale: `AI Detection: Oncology presentation detected ("${kw}"). Assigned directly to Dr. Keerthi (Oncology Specialist, Room 106).`,
+          department: "Oncology",
+          doctor: "Dr. Keerthi",
+          room: "Room 106"
+        };
+      }
+    }
+
+    // Orthopaedics Keywords - Assigned to Dr. Harish
+    const orthoKeywords = ["bone", "fracture", "joint pain", "knee pain", "sprain", "arthritis"];
+    for (const kw of orthoKeywords) {
+      if (text.includes(kw)) {
+        return {
+          level: "Yellow",
+          badgeText: "ðŸŸ¡ Orthopaedic Review (Yellow)",
+          badgeClass: "badge-yellow",
+          rationale: `AI Detection: Musculoskeletal presentation detected ("${kw}"). Assigned to Dr. Harish (Room 103).`,
+          department: "Orthopaedics",
+          doctor: "Dr. Harish",
+          room: "Room 103"
+        };
+      }
+    }
+
+    // Paediatrics Keywords - Assigned to Dr. Kaarthikeya
+    const paedKeywords = ["child", "baby", "infant", "newborn", "pediatric", "paediatric"];
+    for (const kw of paedKeywords) {
+      if (text.includes(kw)) {
+        return {
+          level: "Yellow",
+          badgeText: "ðŸŸ¡ Paediatric Care (Yellow)",
+          badgeClass: "badge-yellow",
+          rationale: `AI Detection: Child health issue detected ("${kw}"). Assigned to Dr. Kaarthikeya (Room 104).`,
+          department: "Paediatrics",
+          doctor: "Dr. Kaarthikeya",
+          room: "Room 104"
+        };
+      }
+    }
+
+    // Gynaecology Keywords - Assigned to Dr. Aadhya
+    const gynaeKeywords = ["pregnancy", "maternal", "antenatal", "menstrual", "period", "gynec", "gynae"];
+    for (const kw of gynaeKeywords) {
+      if (text.includes(kw)) {
+        return {
+          level: "Yellow",
+          badgeText: "ðŸŸ¡ Gynaecology Review (Yellow)",
+          badgeClass: "badge-yellow",
+          rationale: `AI Detection: Women & maternal presentation detected ("${kw}"). Assigned to Dr. Aadhya (Room 105).`,
+          department: "Gynaecology",
+          doctor: "Dr. Aadhya",
+          room: "Room 105"
+        };
+      }
+    }
+
+    // Neurology Keywords - Assigned to Dr. Kanishq
+    const neuroKeywords = ["headache", "migraine", "nerve", "neuro", "numbness", "dizziness"];
+    for (const kw of neuroKeywords) {
+      if (text.includes(kw)) {
+        return {
+          level: "Yellow",
+          badgeText: "ðŸŸ¡ Neurology Review (Yellow)",
+          badgeClass: "badge-yellow",
+          rationale: `AI Detection: Neurological symptom detected ("${kw}"). Assigned to Dr. Kanishq (Room 101).`,
+          department: "Neurology",
+          doctor: "Dr. Kanishq",
+          room: "Room 101"
+        };
+      }
+    }
+
+    // General Acute Keywords
+    const yellowKeywords = [
+      "high fever", "fever", "malaria", "dengue", "typhoid", "vomiting", "diarrhea",
+      "loose motion", "dehydration", "severe pain", "abdominal pain", "stomach pain",
+      "appendix", "hypertension", "high bp", "diabetes", "high sugar", "swelling",
+      "infection", "wound", "burn", "urinary infection", "stones", "jaundice", "skin rash"
+    ];
+
     for (const kw of yellowKeywords) {
       if (text.includes(kw)) {
         return {
           level: "Yellow",
-          badgeText: "🟡 Urgent Doctor Review (Yellow)",
+          badgeText: "ðŸŸ¡ Urgent Doctor Review (Yellow)",
           badgeClass: "badge-yellow",
           rationale: `AI Detection: Acute condition detected ("${kw}"). Requires clinical examination at OPD within 24 hours.`,
           department: "Acute Care Clinic",
@@ -1046,7 +1320,7 @@ class ChikitsaApp {
 
     return {
       level: "Green",
-      badgeText: "🟢 Routine / Mild (Green)",
+      badgeText: "ðŸŸ¢ Routine / Mild (Green)",
       badgeClass: "badge-green",
       rationale: "AI Detection: Standard outpatient consultation. Routine checkup and primary care management.",
       department: "General OPD",
@@ -1079,81 +1353,6 @@ class ChikitsaApp {
 
     conditionInput.addEventListener("input", updateLiveTriage);
     conditionInput.addEventListener("change", updateLiveTriage);
-  }
-
-  // DOCTOR AVAILABILITY & SIGN-IN MANAGEMENT
-  isDoctorLoggedIn(deptName) {
-    const normDept = (deptName || "").toUpperCase();
-    return this.loggedInDoctors.some(d => d.toUpperCase() === normDept);
-  }
-
-  markDoctorLoggedIn(staffName, deptName) {
-    const normDept = (deptName || "").toUpperCase();
-    if (!this.loggedInDoctors.includes(normDept)) {
-      this.loggedInDoctors.push(normDept);
-      localStorage.setItem("chikitsa_logged_in_doctors", JSON.stringify(this.loggedInDoctors));
-    }
-    this.renderFacilityDashboard();
-  }
-
-  toggleDoctorLogin(deptName) {
-    const normDept = (deptName || "").toUpperCase();
-    const idx = this.loggedInDoctors.indexOf(normDept);
-    if (idx >= 0) {
-      this.loggedInDoctors.splice(idx, 1);
-    } else {
-      this.loggedInDoctors.push(normDept);
-    }
-    localStorage.setItem("chikitsa_logged_in_doctors", JSON.stringify(this.loggedInDoctors));
-    this.renderFacilityDashboard();
-  }
-
-  viewPatientCard(patientId) {
-    const patient = this.data.patients.find(p => p.id === patientId);
-    if (!patient) return;
-
-    const modal = document.getElementById("modal-patient-card");
-    const content = document.getElementById("patient-card-content");
-    if (!modal || !content) return;
-
-    content.innerHTML = `
-      <div style="border: 2px solid #0d9488; border-radius: 12px; padding: 20px; background: #f0fdfa;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #0d9488; padding-bottom: 10px;">
-          <div>
-            <h3 style="color:#0f766e; margin:0;">ChikitsaConnect - Rural Health Card</h3>
-            <small>Government Rural Health Network</small>
-          </div>
-          <div style="text-align:right;">
-            <strong style="font-size:1.1rem; color:#0d9488;">${patient.id}</strong><br>
-            ${patient.token ? `<span class="badge badge-blue" style="font-size:0.9rem;">🎟️ Token: ${patient.token}</span><br>` : ''}
-            <small>${patient.abhaId || ''}</small>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px;">
-          <div><strong>Name:</strong> ${patient.name}</div>
-          <div><strong>Age / Gender:</strong> ${patient.age}y / ${patient.gender}</div>
-          <div><strong>Mobile:</strong> ${patient.mobile}</div>
-          <div><strong>Village/Town:</strong> ${patient.village}</div>
-          <div><strong>Blood Group:</strong> ${patient.bloodGroup || 'O+'}</div>
-          <div><strong>Triage Severity:</strong> <span class="badge ${patient.triageStatus === 'Red' ? 'badge-red' : 'badge-green'}">${patient.triageStatus || 'Green'}</span></div>
-        </div>
-
-        <div style="margin-top:14px; padding:10px; background:#fff; border-radius:8px; border:1px solid #cbd5e1;">
-          <strong>Clinical Condition:</strong> ${patient.condition}<br>
-          <strong>Vitals on Record:</strong> BP: ${patient.lastVitals?.bp || '120/80'} | Pulse: ${patient.lastVitals?.pulse || '76'} bpm | Temp: ${patient.lastVitals?.temp || '98.6 F'}
-        </div>
-
-        <div style="margin-top:16px; text-align:center;">
-          <button class="btn btn-primary" onclick="window.print()">🖨️ ${this.lang === 'te' ? 'కార్డ్ ముద్రించండి' : this.lang === 'hi' ? 'कार्ड प्रिंट करें' : 'Print Health Card'}</button>
-          <button class="btn btn-secondary" style="margin-left:8px;" onclick="document.getElementById('modal-patient-card').style.display='none'">
-            ${this.lang === 'te' ? 'మూసివేయి' : this.lang === 'hi' ? 'बंद करें' : 'Close'}
-          </button>
-        </div>
-      </div>
-    `;
-
-    modal.style.display = "flex";
   }
 
   // MODULE 5: REFERRAL TRACKING
@@ -1456,20 +1655,32 @@ class ChikitsaApp {
   }
 
   renderDatabaseTable() {
-    const listEl = document.getElementById("database-records-list");
-    const countEl = document.getElementById("db-total-count");
-    if (!listEl) return;
+    const isWorker = this.role === "worker";
+    const workerView = document.getElementById("worker-database-view");
+    const restrictedView = document.getElementById("patient-database-restricted");
 
-    const filterCategory = document.getElementById("db-filter-category")?.value || "ALL";
-    const searchTerm = (document.getElementById("db-search-input")?.value || "").toLowerCase().trim();
-
-    if (!this.data.database) {
-      this.data.database = (typeof DEFAULT_MOCK_DATA !== 'undefined' && DEFAULT_MOCK_DATA.database) ? DEFAULT_MOCK_DATA.database : [];
+    if (!isWorker) {
+      if (workerView) workerView.style.display = "none";
+      if (restrictedView) restrictedView.style.display = "block";
+      return;
     }
 
-    const filtered = this.data.database.filter(item => {
-      const matchCategory = filterCategory === "ALL" || item.type === filterCategory;
-      const jsonStr = JSON.stringify(item).toLowerCase();
+    if (workerView) workerView.style.display = "block";
+    if (restrictedView) restrictedView.style.display = "none";
+
+    const listEl = document.getElementById("database-records-list");
+    const countEl = document.getElementById("db-total-count");
+    const catFilter = document.getElementById("db-filter-category");
+    const searchInput = document.getElementById("db-search-input");
+
+    if (!listEl) return;
+
+    const selectedCategory = catFilter ? catFilter.value : "ALL";
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+    const filtered = this.data.database.filter(log => {
+      const matchCategory = selectedCategory === "ALL" || log.type === selectedCategory;
+      const jsonStr = JSON.stringify(log).toLowerCase();
       const matchSearch = !searchTerm || jsonStr.includes(searchTerm);
       return matchCategory && matchSearch;
     });
@@ -1509,16 +1720,49 @@ class ChikitsaApp {
   }
 
   exportDatabaseJSON() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data.database, null, 2));
+    const fullDb = {
+      exportedAt: new Date().toISOString(),
+      hospital: "ABCD HOSPITAL",
+      patients: this.data.patients,
+      queue: this.data.queue,
+      facility: this.data.facility,
+      auditLogs: this.data.database
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullDb, null, 2));
     const dlAnchor = document.createElement("a");
     dlAnchor.setAttribute("href", dataStr);
     dlAnchor.setAttribute("download", `chikitsa_central_database_${Date.now()}.json`);
     dlAnchor.click();
   }
 
+  exportPatientsCSV() {
+    const headers = ["Patient ID", "Full Name", "Age", "Gender", "Weight", "Village", "Phone Number", "Blood Group", "Reason/Condition", "Triage Status", "Assigned Token", "Registered At"];
+    const rows = this.data.patients.map(p => [
+      `"${p.id || ''}"`,
+      `"${p.name || ''}"`,
+      `"${p.age || ''}"`,
+      `"${p.gender || ''}"`,
+      `"${p.weight || '55 kg'}"`,
+      `"${p.village || ''}"`,
+      `"${p.mobile || ''}"`,
+      `"${p.bloodGroup || 'O+'}"`,
+      `"${(p.condition || '').replace(/"/g, '""')}"`,
+      `"${p.triageStatus || ''}"`,
+      `"${p.token || ''}"`,
+      `"${p.registeredAt || ''}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const dlAnchor = document.createElement("a");
+    dlAnchor.setAttribute("href", encodedUri);
+    dlAnchor.setAttribute("download", `chikitsa_patient_records_${Date.now()}.csv`);
+    dlAnchor.click();
+  }
+
   copyDatabaseJSON() {
     navigator.clipboard.writeText(JSON.stringify(this.data.database, null, 2))
-      .then(() => alert("✅ Complete Central Database JSON copied to clipboard!"))
+      .then(() => alert("âœ… Complete Central Database JSON copied to clipboard!"))
       .catch(() => alert("Failed to copy JSON."));
   }
 

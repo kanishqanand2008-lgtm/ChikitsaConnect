@@ -1,0 +1,222 @@
+﻿{
+  "databaseVersion": "2.0.0",
+  "facility": {
+    "name": "ABCD HOSPITAL",
+    "type": "Primary Health Centre (PHC) & Rural Emergency Hub",
+    "district": "Peddapalli Rural District",
+    "pinCode": "2026",
+    "totalBeds": 24,
+    "occupiedBeds": 19,
+    "vacantBeds": 5,
+    "icuEmergencyBeds": { "total": 6, "occupied": 4, "vacant": 2 },
+    "oxygenCylinders": { "total": 18, "full": 14, "inUse": 4 },
+    "departments": [
+      {
+        "id": "dept-neuro",
+        "name": "NEUROLOGY",
+        "doctorName": "Dr. Kanishq",
+        "qualification": "MD (Neurology), DM",
+        "room": "Room 101",
+        "status": "Available Today"
+      },
+      {
+        "id": "dept-cardio",
+        "name": "CARDIOLOGY",
+        "doctorName": "Dr. Likith",
+        "qualification": "DM (Cardiology), MD",
+        "room": "Room 102",
+        "status": "Available Today"
+      },
+      {
+        "id": "dept-ortho",
+        "name": "ORTHOPAEDICS",
+        "doctorName": "Dr. Harish",
+        "qualification": "MS (Ortho), D.Ortho",
+        "room": "Room 103",
+        "status": "Available Today"
+      },
+      {
+        "id": "dept-paed",
+        "name": "PAEDIATRICS",
+        "doctorName": "Dr. Kaarthikeya",
+        "qualification": "MD (Paediatrics), DCH",
+        "room": "Room 104",
+        "status": "Available Today"
+      },
+      {
+        "id": "dept-gynae",
+        "name": "GYNAECOLOGY",
+        "doctorName": "Dr. Aadhya",
+        "qualification": "MS (OBGYN), DGO",
+        "room": "Room 105",
+        "status": "Available Today"
+      },
+      {
+        "id": "dept-onco",
+        "name": "ONCOLOGY",
+        "doctorName": "Dr. Keerthi",
+        "qualification": "MD, DNB (Medical Oncology)",
+        "room": "Room 106",
+        "status": "Available Today"
+      }
+    ]
+  },
+  "patients": [
+    {
+      "id": "PAT-1001",
+      "name": "Mallamma Goud",
+      "age": 52,
+      "gender": "Female",
+      "weight": "54 kg",
+      "village": "Kothapalli Sub-Centre",
+      "mobile": "9848012345",
+      "bloodGroup": "B+",
+      "condition": "Hypertension, chronic knee joint pain",
+      "token": "OPD-011",
+      "queuePosition": 1,
+      "abhaId": "ABHA-4592-8821-3910",
+      "registeredAt": "2026-09-05 09:30 AM",
+      "triageStatus": "Yellow",
+      "lastVitals": { "bp": "148/92", "pulse": "82", "temp": "98.4 F", "spO2": "97%" }
+    },
+    {
+      "id": "PAT-1002",
+      "name": "Raju Nayak",
+      "age": 29,
+      "gender": "Male",
+      "weight": "68 kg",
+      "village": "Ramannapet Sub-Centre",
+      "mobile": "9440156789",
+      "bloodGroup": "O+",
+      "condition": "High grade fever 103F with shivering, suspect malaria",
+      "token": "OPD-012",
+      "queuePosition": 2,
+      "abhaId": "ABHA-7123-9045-1122",
+      "registeredAt": "2026-09-05 11:15 AM",
+      "triageStatus": "Yellow",
+      "lastVitals": { "bp": "118/74", "pulse": "104", "temp": "103.1 F", "spO2": "96%" }
+    },
+    {
+      "id": "PAT-1003",
+      "name": "Lavanya K",
+      "age": 24,
+      "gender": "Female",
+      "weight": "59 kg",
+      "village": "Ghanpur Tanda",
+      "mobile": "9988223344",
+      "bloodGroup": "A+",
+      "condition": "Antenatal Checkup (32 weeks pregnancy), mild ankle edema",
+      "token": "OPD-013",
+      "queuePosition": 3,
+      "abhaId": "ABHA-3312-5544-7788",
+      "registeredAt": "2026-09-06 08:20 AM",
+      "triageStatus": "Yellow",
+      "lastVitals": { "bp": "130/84", "pulse": "78", "temp": "98.6 F", "spO2": "98%" }
+    },
+    {
+      "id": "PAT-1004",
+      "name": "Venkatesh Rao",
+      "age": 61,
+      "gender": "Male",
+      "weight": "63 kg",
+      "village": "Chandur PHC Ward",
+      "mobile": "9701234567",
+      "bloodGroup": "AB+",
+      "condition": "Type 2 Diabetes routine follow-up, dietary counseling",
+      "token": "OPD-014",
+      "queuePosition": 4,
+      "abhaId": "ABHA-8921-1122-3344",
+      "registeredAt": "2026-09-06 09:00 AM",
+      "triageStatus": "Green",
+      "lastVitals": { "bp": "130/80", "pulse": "74", "temp": "98.2 F", "spO2": "99%" }
+    }
+  ],
+  "queue": [
+    {
+      "token": "OPD-014",
+      "patientName": "Anand Kumar",
+      "department": "Paediatrics",
+      "doctor": "Dr. Kaarthikeya, MD",
+      "room": "Room 104",
+      "status": "Serving",
+      "waitMins": 0,
+      "waitSeconds": 0
+    },
+    {
+      "token": "OPD-015",
+      "patientName": "Saraswathi Bai",
+      "department": "Cardiology",
+      "doctor": "Dr. Likith, DM",
+      "room": "Room 102",
+      "status": "Waiting",
+      "waitMins": 4,
+      "waitSeconds": 240
+    },
+    {
+      "token": "OPD-016",
+      "patientName": "Lakshmi Devi",
+      "department": "Gynaecology",
+      "doctor": "Dr. Aadhya, MS",
+      "room": "Room 105",
+      "status": "Waiting",
+      "waitMins": 8,
+      "waitSeconds": 480
+    },
+    {
+      "token": "OPD-017",
+      "patientName": "Ramesh Reddy",
+      "department": "Neurology",
+      "doctor": "Dr. Kanishq, MD",
+      "room": "Room 101",
+      "status": "Waiting",
+      "waitMins": 12,
+      "waitSeconds": 720
+    },
+    {
+      "token": "OPD-018",
+      "patientName": "Balaram Naik",
+      "department": "Orthopaedics",
+      "doctor": "Dr. Harish, MS",
+      "room": "Room 103",
+      "status": "Waiting",
+      "waitMins": 16,
+      "waitSeconds": 960
+    },
+    {
+      "token": "OPD-019",
+      "patientName": "Sita Ramaiah",
+      "department": "Oncology",
+      "doctor": "Dr. Keerthi",
+      "room": "Room 106",
+      "status": "Waiting",
+      "waitMins": 20,
+      "waitSeconds": 1200
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "LOG-1001",
+      "timestamp": "2026-09-08 09:00:15",
+      "category": "WORKER_AUTH",
+      "actor": "Dr. Kanishq (Staff)",
+      "summary": "Healthcare Worker verified at ABCD HOSPITAL (Department: NEUROLOGY, PIN: 2026)",
+      "payload": { "hospital": "ABCD HOSPITAL", "staff": "KANISHQ", "department": "NEUROLOGY", "pin": "2026" }
+    },
+    {
+      "id": "LOG-1002",
+      "timestamp": "2026-09-08 09:15:20",
+      "category": "PATIENT_REGISTRATION",
+      "actor": "OPD Registration Desk",
+      "summary": "New Patient Registered: \"Mallamma Goud\" (PAT-1001, 52y, Female, 54kg, Kothapalli)",
+      "payload": { "patientId": "PAT-1001", "name": "Mallamma Goud", "token": "OPD-011", "weight": "54 kg", "triage": "Yellow" }
+    },
+    {
+      "id": "LOG-1003",
+      "timestamp": "2026-09-08 09:30:45",
+      "category": "QUEUE_TOKEN",
+      "actor": "OPD Token Kiosk",
+      "summary": "New OPD Token generated: OPD-019 for \"Sita Ramaiah\" assigned to Dr. Keerthi (Oncology, Room 106)",
+      "payload": { "token": "OPD-019", "doctor": "Dr. Keerthi", "department": "Oncology", "room": "Room 106", "waitMins": 20, "waitSeconds": 1200 }
+    }
+  ]
+}
