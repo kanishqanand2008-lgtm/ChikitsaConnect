@@ -1,4 +1,4 @@
-﻿// ChikitsaConnect - Rural Healthcare Platform
+// ChikitsaConnect - Rural Healthcare Platform
 // Core Application Logic: Tri-lingual localization, Role-based access, Button-driven AI Assistant, and 9 Modules
 
 // TRANSLATIONS DICTIONARY (English, Telugu, Hindi)
@@ -11,6 +11,7 @@ const I18N = {
     switchRole: "Switch Role",
     changeLang: "Language",
     emergencySOS: "Emergency 108",
+    navDashboard: "Dashboard",
     navTelecon: "Teleconsultation",
     navQueue: "Appointments & Queue",
     navTriage: "Digital Triage",
@@ -63,6 +64,7 @@ const I18N = {
     switchRole: "రోల్ మార్చండి",
     changeLang: "భాష",
     emergencySOS: "అత్యవసరం 108",
+    navDashboard: "డాష్‌బోర్డ్",
     navTelecon: "టెలికన్సల్టేషన్",
     navQueue: "టోకెన్లు & క్యూ",
     navTriage: "డిజిటల్ ట్రియాజ్",
@@ -115,6 +117,7 @@ const I18N = {
     switchRole: "रोल बदलें",
     changeLang: "भाषा",
     emergencySOS: "आपातकालीन 108",
+    navDashboard: "डैशबोर्ड",
     navTelecon: "टेलीपरामर्श",
     navQueue: "अपॉइंटमेंट और कतार",
     navTriage: "डिजिटल ट्राइएज",
@@ -188,7 +191,7 @@ class ChikitsaApp {
       database: JSON.parse(localStorage.getItem("chikitsa_central_database")) || DEFAULT_MOCK_DATA.database
     };
 
-    this.activeTab = "queue";
+    this.activeTab = "dashboard";
     this.userToken = localStorage.getItem("chikitsa_my_token") || "OPD-019";
     this.synth = window.speechSynthesis || null;
 
@@ -206,8 +209,15 @@ class ChikitsaApp {
     // Initialise UI strings with base language
     this.setLanguage(this.lang, false);
 
-    // Step 1: Prompt Language Question Interface FIRST
-    this.showLanguageModal();
+    // Step 1: Prompt Language Question Interface FIRST (Multi-Page Onboarding)
+    const p1 = document.getElementById("page-language");
+    const p2 = document.getElementById("page-role");
+    const wm = document.getElementById("modal-worker-details");
+    const oc = document.getElementById("onboarding-container");
+    if (oc) oc.style.display = "flex";
+    if (p1) p1.style.display = "block";
+    if (p2) p2.style.display = "none";
+    if (wm) wm.style.display = "none";
 
     this.bindGlobalEvents();
     this.bindPatientTriageAI();
@@ -314,27 +324,65 @@ class ChikitsaApp {
     }
   }
 
-  showLanguageModal() {
-    const modal = document.getElementById("modal-language");
-    if (modal) modal.style.display = "flex";
+  // ==================== MULTI-PAGE ONBOARDING FLOW ====================
+  selectLanguageAndGoToPage2(lang) {
+    this.lang = lang || 'en';
+    this.setLanguage(this.lang, false);
+
+    const oc = document.getElementById("onboarding-container");
+    const p1 = document.getElementById("page-language");
+    const p2 = document.getElementById("page-role");
+    const wm = document.getElementById("modal-worker-details");
+
+    if (oc) oc.style.setProperty("display", "flex", "important");
+    if (wm) wm.style.setProperty("display", "none", "important");
+    if (p1) p1.style.setProperty("display", "none", "important");
+    if (p2) {
+      p2.style.setProperty("display", "block", "important");
+    }
+
+    // Rural voice audio cue (safe without blocking)
+    try {
+      if (this.lang === 'te') {
+        this.speakText("చికిత్స కనెక్ట్‌కు స్వాగతం. దయచేసి మీరు రోగి లేదా ఆసుపత్రి కార్యకర్త అని ఎంచుకోండి.");
+      } else if (this.lang === 'hi') {
+        this.speakText("चिकित्सा कनेक्ट में आपका स्वागत है। कृपया चुनें कि आप मरीज हैं या अस्पताल कार्यकर्ता।");
+      } else {
+        this.speakText("Welcome to ChikitsaConnect. Please select whether you are a patient or a hospital worker.");
+      }
+    } catch (e) {
+      console.warn("Speech cue error:", e);
+    }
   }
 
-  closeLanguageModal() {
-    const modal = document.getElementById("modal-language");
-    if (modal) modal.style.display = "none";
+  backToLanguagePage() {
+    const oc = document.getElementById("onboarding-container");
+    const p1 = document.getElementById("page-language");
+    const p2 = document.getElementById("page-role");
+    const wm = document.getElementById("modal-worker-details");
+    if (oc) oc.style.setProperty("display", "flex", "important");
+    if (wm) wm.style.setProperty("display", "none", "important");
+    if (p2) p2.style.setProperty("display", "none", "important");
+    if (p1) p1.style.setProperty("display", "block", "important");
   }
 
-  showRoleModal() {
-    const modal = document.getElementById("modal-role");
-    if (modal) modal.style.display = "flex";
-  }
-
-  closeRoleModal() {
-    const modal = document.getElementById("modal-role");
-    if (modal) modal.style.display = "none";
+  selectRole(roleType) {
+    if (roleType === "patient") {
+      this.setRole("patient");
+      const oc = document.getElementById("onboarding-container");
+      if (oc) oc.style.display = "none";
+      this.switchTab("dashboard");
+    } else if (roleType === "worker") {
+      this.showWorkerDetailsModal();
+    }
   }
 
   showWorkerDetailsModal() {
+    const p1 = document.getElementById("page-language");
+    const p2 = document.getElementById("page-role");
+    if (p1) p1.style.display = "none";
+    if (p2) p2.style.display = "none";
+
     const modal = document.getElementById("modal-worker-details");
     if (modal) {
       const hospEl = document.getElementById("worker-hospital-input");
@@ -351,16 +399,367 @@ class ChikitsaApp {
         errBox.style.display = "none";
         errBox.innerHTML = "";
       }
-      modal.style.display = "flex";
+      modal.style.display = "block";
     }
   }
 
   closeWorkerDetailsModal() {
     const modal = document.getElementById("modal-worker-details");
     if (modal) modal.style.display = "none";
-    if (!this.role) {
-      this.showRoleModal();
+    const p2 = document.getElementById("page-role");
+    if (p2) p2.style.display = "block";
+  }
+
+  showLanguageModal() {
+    this.backToLanguagePage();
+    const oc = document.getElementById("onboarding-container");
+    if (oc) oc.style.display = "flex";
+  }
+
+  closeLanguageModal() {
+    const oc = document.getElementById("onboarding-container");
+    if (oc) oc.style.display = "none";
+  }
+
+  showRoleModal() {
+    const p1 = document.getElementById("page-language");
+    const p2 = document.getElementById("page-role");
+    const oc = document.getElementById("onboarding-container");
+    if (oc) oc.style.display = "flex";
+    if (p1) p1.style.display = "none";
+    if (p2) p2.style.display = "block";
+  }
+
+  closeRoleModal() {
+    const oc = document.getElementById("onboarding-container");
+    if (oc) oc.style.display = "none";
+  }
+
+  // ==================== TOLL-FREE IVR HELPLINE (6699) 7-STEP SIMULATOR ====================
+  openIVRSimulator() {
+    const modal = document.getElementById("modal-ivr-simulator");
+    if (modal) {
+      modal.style.display = "flex";
+      this.ivrResetToStage(1);
     }
+  }
+
+  closeIVRSimulator() {
+    const modal = document.getElementById("modal-ivr-simulator");
+    if (modal) modal.style.display = "none";
+    if (this.synth) this.synth.cancel();
+  }
+
+  ivrResetToStage(stageNum) {
+    this.ivrState = {
+      stage: stageNum,
+      symptomKey: null,
+      symptomLabel: "",
+      priority: "Routine",
+      priorityBadge: "Green",
+      priorityDesc: "",
+      hospitalNum: null,
+      hospitalName: "ABCD HOSPITAL PHC",
+      doctorName: "Dr. Keerthi (Oncology Specialist)",
+      doctorRoom: "Room 106",
+      tokenNo: "OPD-" + String(Math.floor(10 + Math.random() * 89)).padStart(3, '0'),
+      waitTimeMins: 15,
+      apptTime: new Date(Date.now() + 15 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    this.ivrShowStage(stageNum);
+  }
+
+  ivrShowStage(stageNum) {
+    if (!this.ivrState) {
+      this.ivrResetToStage(stageNum);
+      return;
+    }
+    this.ivrState.stage = stageNum;
+    for (let i = 1; i <= 7; i++) {
+      const stepEl = document.getElementById(`ivr-step-badge-${i}`);
+      const stageEl = document.getElementById(`ivr-stage-${i}`);
+      if (stepEl) {
+        stepEl.classList.toggle("active", i === stageNum);
+        stepEl.classList.toggle("completed", i < stageNum);
+      }
+      if (stageEl) {
+        stageEl.style.display = (i === stageNum) ? "block" : "none";
+      }
+    }
+  }
+
+  ivrStartCall() {
+    this.ivrShowStage(2);
+    const promptText = this.lang === 'te' 
+      ? "నమస్కారం! చికిత్స ఉచిత హెల్ప్‌లైన్ 6699కి స్వాగతం. దయచేసి మీ లక్షణాలను ఎంచుకోవడానికి సంఖ్యను నొక్కండి."
+      : this.lang === 'hi'
+      ? "नमस्ते! चिकित्सा निःशुल्क हेल्पलाइन 6699 में आपका स्वागत है। कृपया अपने लक्षण चुनने के लिए संख्या दबाएं।"
+      : "Namaste! Welcome to Chikitsa Total Free Helpline 6699. Please press a key to choose your symptoms.";
+    this.speakText(promptText);
+  }
+
+  ivrSelectSymptom(key) {
+    if (!this.ivrState) this.ivrResetToStage(2);
+    this.ivrState.symptomKey = key;
+    let priority = "Routine";
+    let priorityBadge = "Green";
+    let priorityDesc = "";
+    let symptomName = "";
+
+    if (key === 1) {
+      symptomName = "Chest Pain / Breathless (Acute)";
+      priority = "EMERGENCY (Red)";
+      priorityBadge = "Red";
+      priorityDesc = "⚠️ Critical cardiac/respiratory distress detected! Immediate hospital resuscitation and 108 ambulance dispatch alert sent.";
+    } else if (key === 2) {
+      symptomName = "High Fever / Chills";
+      priority = "Urgent (Yellow)";
+      priorityBadge = "Yellow";
+      priorityDesc = "Sub-acute infection risk. Rapid malaria/dengue blood screen and doctor consultation required within 4 hours.";
+    } else if (key === 3) {
+      symptomName = "Pregnancy / Maternal Care";
+      priority = "Priority (Yellow)";
+      priorityBadge = "Yellow";
+      priorityDesc = "Antenatal checkup flagged. Assigned to Dr. Aadhya (Obstetrics/Gynecology) at Maternal Care Bay.";
+    } else if (key === 4) {
+      symptomName = "Cancer / Oncology Review (Dr. Keerthi)";
+      priority = "Specialist OPD (Green)";
+      priorityBadge = "Green";
+      priorityDesc = "Specialist review routed directly to Dr. Keerthi (Oncology, Room 106). Active queue slot assigned.";
+    } else {
+      symptomName = "General OPD / Routine Check";
+      priority = "Routine (Green)";
+      priorityBadge = "Green";
+      priorityDesc = "General clinical examination and pharmacy dispensation queue. Standard waiting time.";
+    }
+
+    this.ivrState.symptomLabel = symptomName;
+    this.ivrState.priority = priority;
+    this.ivrState.priorityBadge = priorityBadge;
+    this.ivrState.priorityDesc = priorityDesc;
+
+    // Render Stage 3
+    const titleEl = document.getElementById("ivr-triage-title");
+    const pillEl = document.getElementById("ivr-triage-pill");
+    const descEl = document.getElementById("ivr-triage-desc");
+
+    if (titleEl) titleEl.textContent = `AI Evaluation: ${symptomName}`;
+    if (pillEl) {
+      pillEl.textContent = priority;
+      pillEl.className = `badge badge-${priorityBadge.toLowerCase()}`;
+    }
+    if (descEl) descEl.textContent = priorityDesc;
+
+    this.ivrShowStage(3);
+    this.speakText(`Triage Assessment: ${priority}. ${priorityDesc}`);
+  }
+
+  ivrProceedToHospitalSelect() {
+    this.ivrShowStage(4);
+    const voiceMsg = this.lang === 'te'
+      ? "సమీప ఆసుపత్రిని ఎంచుకోవడానికి 1, 2 లేదా 3 నొక్కండి."
+      : this.lang === 'hi'
+      ? "निकटतम स्वास्थ्य केंद्र चुनने के लिए 1, 2 या 3 दबाएं।"
+      : "Press 1 for Sub-Centre, 2 for ABCD HOSPITAL PHC, or 3 for District Hospital.";
+    this.speakText(voiceMsg);
+  }
+
+  ivrSelectHospital(num) {
+    if (!this.ivrState) this.ivrResetToStage(4);
+    this.ivrState.hospitalNum = num;
+    if (num === 1) {
+      this.ivrState.hospitalName = "Kothapalli Sub-Centre (ANM Sunitha)";
+      this.ivrState.doctorName = "ANM Sunitha (Primary Health Worker)";
+      this.ivrState.doctorRoom = "Health Sub-Centre Kothapalli";
+    } else if (num === 3) {
+      this.ivrState.hospitalName = "Peddapalli District Hospital";
+      this.ivrState.doctorName = "Senior Consultant (District Civil Hospital)";
+      this.ivrState.doctorRoom = "Specialist OPD Wing";
+    } else {
+      this.ivrState.hospitalName = "ABCD HOSPITAL PHC Hub (Peddapalli)";
+      this.ivrState.doctorName = "Dr. Keerthi (Oncology Specialist)";
+      this.ivrState.doctorRoom = "Room 106, Specialist OPD";
+    }
+
+    // Move to Stage 5: Call Forwarded
+    this.ivrShowStage(5);
+    const fwdText = document.getElementById("ivr-forward-text");
+    if (fwdText) {
+      fwdText.textContent = `Routing call to ${this.ivrState.hospitalName} Receptionist Desk...`;
+    }
+    this.speakText(`Forwarding your call to ${this.ivrState.hospitalName}. Please hold.`);
+
+    // Automatically transition to Stage 6 after 2 seconds simulation
+    setTimeout(() => {
+      this.ivrShowStage(6);
+      const msgEl = document.getElementById("ivr-receptionist-msg");
+      const confirmText = `Namaste! I am receptionist Sunitha at ${this.ivrState.hospitalName}. I have confirmed your appointment with ${this.ivrState.doctorName}. We are sending your SMS confirmation pass now.`;
+      if (msgEl) msgEl.textContent = `"${confirmText}"`;
+      this.speakText(confirmText);
+    }, 2000);
+  }
+
+  ivrTriggerSMS() {
+    if (!this.ivrState) this.ivrResetToStage(6);
+    // Generate new queue record and token
+    const token = "OPD-" + String(Math.floor(20 + Math.random() * 80)).padStart(3, '0');
+    const waitSecs = 15 * 60; // 15 mins
+    this.ivrState.tokenNo = token;
+    this.ivrState.waitTimeMins = 15;
+    this.ivrState.apptTime = new Date(Date.now() + 15 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Update SMS stage fields
+    const smsTok = document.getElementById("sms-token-num");
+    const smsWait = document.getElementById("sms-wait-time");
+    const smsTime = document.getElementById("sms-appt-time");
+    const smsDoc = document.getElementById("sms-doctor-name");
+    const smsLoc = document.getElementById("sms-location");
+
+    if (smsTok) smsTok.textContent = token;
+    if (smsWait) smsWait.textContent = `~15 mins (${this.ivrState.hospitalName})`;
+    if (smsTime) smsTime.textContent = `Today ${this.ivrState.apptTime}`;
+    if (smsDoc) smsDoc.textContent = this.ivrState.doctorName;
+    if (smsLoc) smsLoc.textContent = `${this.ivrState.doctorRoom}, ${this.ivrState.hospitalName}`;
+
+    // Add token to queue data so it's live on the queue board!
+    const newQueueItem = {
+      id: "Q" + Date.now(),
+      token: token,
+      patientName: "IVR Patient (6699 Helpline)",
+      age: 42,
+      gender: "Citizen",
+      village: "Rural Caller",
+      triage: this.ivrState.priorityBadge || "Green",
+      doctor: this.ivrState.doctorName,
+      room: this.ivrState.doctorRoom,
+      status: "Waiting",
+      waitSeconds: waitSecs,
+      reason: `IVR 6699: ${this.ivrState.symptomLabel || "General Consult"}`
+    };
+    this.data.queue.push(newQueueItem);
+    this.saveData("queue");
+    this.userToken = token;
+    localStorage.setItem("chikitsa_my_token", token);
+    this.renderQueueBoard();
+
+    // Log to central database
+    this.logToDatabase(
+      "IVR_HELPLINE_CALL",
+      `IVR 6699 Caller (${token})`,
+      `Toll-Free 6699 call completed: ${this.ivrState.symptomLabel} -> ${this.ivrState.hospitalName} -> Doctor: ${this.ivrState.doctorName}`,
+      {
+        token: token,
+        symptom: this.ivrState.symptomLabel,
+        hospital: this.ivrState.hospitalName,
+        doctor: this.ivrState.doctorName,
+        smsDelivered: true,
+        timestamp: new Date().toLocaleString()
+      }
+    );
+
+    this.ivrShowStage(7);
+    this.speakText(`SMS Confirmation Sent. Your token number is ${token}. Assigned to ${this.ivrState.doctorName}.`);
+  }
+
+  ivrViewInQueue() {
+    this.closeIVRSimulator();
+    this.switchTab("queue");
+  }
+
+  // ==================== "WHAT DO I NEED?" GUIDE ====================
+  openWhatDoINeedModal() {
+    const modal = document.getElementById("modal-what-do-i-need");
+    const resultBox = document.getElementById("guide-result-box");
+    if (resultBox) resultBox.style.display = "none";
+    if (modal) modal.style.display = "flex";
+  }
+
+  closeWhatDoINeedModal() {
+    const modal = document.getElementById("modal-what-do-i-need");
+    if (modal) modal.style.display = "none";
+  }
+
+  guideSelect(type) {
+    const resultBox = document.getElementById("guide-result-box");
+    if (!resultBox) return;
+
+    let title = "";
+    let actionHtml = "";
+    let voiceText = "";
+
+    if (type === 'emergency') {
+      title = "🚨 Immediate Emergency Care Needed";
+      actionHtml = `
+        <div style="color: #b91c1c; font-weight: 700; margin-bottom: 6px;">Status: Critical / Acute Condition</div>
+        <p style="margin: 0 0 10px 0; color: #334155;">Do not wait in regular OPD. Proceed directly to <strong>Emergency Trauma Care (Room 100)</strong> or dispatch a 108 Ambulance immediately.</p>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-danger btn-sm" onclick="window.location.href='tel:108'">🚨 Call 108 Ambulance</button>
+          <button class="btn btn-secondary btn-sm" onclick="chikitsaApp.closeWhatDoINeedModal(); chikitsaApp.switchTab('emergency');">Emergency Desk</button>
+        </div>
+      `;
+      voiceText = "Emergency condition detected. Please call 108 Ambulance or go to Emergency Trauma Room.";
+    } else if (type === 'oncology') {
+      title = "🎗️ Oncology & Cancer Care Specialist";
+      actionHtml = `
+        <div style="color: #0f766e; font-weight: 700; margin-bottom: 6px;">Doctor Assigned: Dr. Keerthi (Room 106)</div>
+        <p style="margin: 0 0 10px 0; color: #334155;">Dr. Keerthi is currently on duty at ABCD HOSPITAL. Specialized in cancer screenings, biopsies, lump examinations, and palliative tele-consults.</p>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary btn-sm" onclick="chikitsaApp.closeWhatDoINeedModal(); chikitsaApp.handleGenerateToken();">🎟️ Book Token with Dr. Keerthi</button>
+          <button class="btn btn-secondary btn-sm" onclick="chikitsaApp.closeWhatDoINeedModal(); chikitsaApp.switchTab('facility');">Doctor Roster</button>
+        </div>
+      `;
+      voiceText = "Assigned to Dr. Keerthi in Room 106 for Oncology consultation.";
+    } else if (type === 'maternal') {
+      title = "🤰 Maternal & Obstetrics Care";
+      actionHtml = `
+        <div style="color: #0f766e; font-weight: 700; margin-bottom: 6px;">Doctor Assigned: Dr. Aadhya (Room 105)</div>
+        <p style="margin: 0 0 10px 0; color: #334155;">ANC check-up, fetal doppler scans, iron supplementation, and maternal high-risk tracking.</p>
+        <button class="btn btn-primary btn-sm" onclick="chikitsaApp.closeWhatDoINeedModal(); chikitsaApp.handleGenerateToken();">🎟️ Book ANC Token</button>
+      `;
+      voiceText = "Assigned to Dr. Aadhya in Room 105 for Maternal Care.";
+    } else if (type === 'child') {
+      title = "👶 Pediatric Care & Immunization";
+      actionHtml = `
+        <div style="color: #0f766e; font-weight: 700; margin-bottom: 6px;">Doctor Assigned: Dr. Kaarthikeya (Room 104)</div>
+        <p style="margin: 0 0 10px 0; color: #334155;">Child growth monitoring, vaccination, pediatric fever, and nutrition advice.</p>
+        <button class="btn btn-primary btn-sm" onclick="chikitsaApp.closeWhatDoINeedModal(); chikitsaApp.handleGenerateToken();">🎟️ Book Pediatric Token</button>
+      `;
+      voiceText = "Assigned to Dr. Kaarthikeya in Room 104 for Pediatric Care.";
+    } else if (type === 'bone') {
+      title = "🦴 Orthopaedics & Joint Care";
+      actionHtml = `
+        <div style="color: #0f766e; font-weight: 700; margin-bottom: 6px;">Doctor Assigned: Dr. Harish (Room 103)</div>
+        <p style="margin: 0 0 10px 0; color: #334155;">Bone fracture plaster, arthritis, back pain, and joint mobility rehabilitation.</p>
+        <button class="btn btn-primary btn-sm" onclick="chikitsaApp.closeWhatDoINeedModal(); chikitsaApp.handleGenerateToken();">🎟️ Book Ortho Token</button>
+      `;
+      voiceText = "Assigned to Dr. Harish in Room 103 for Orthopaedics.";
+    } else if (type === 'neuro') {
+      title = "🧠 Neurology & Nerve Specialist";
+      actionHtml = `
+        <div style="color: #0f766e; font-weight: 700; margin-bottom: 6px;">Doctor Assigned: Dr. Kanishq (Room 101)</div>
+        <p style="margin: 0 0 10px 0; color: #334155;">Stroke prevention, persistent severe migraine, epilepsy, and peripheral neuropathy.</p>
+        <button class="btn btn-primary btn-sm" onclick="chikitsaApp.closeWhatDoINeedModal(); chikitsaApp.handleGenerateToken();">🎟️ Book Neurology Token</button>
+      `;
+      voiceText = "Assigned to Dr. Kanishq in Room 101 for Neurology.";
+    }
+
+    resultBox.innerHTML = `
+      <h4 style="margin: 0 0 6px 0; color: #0f766e;">${title}</h4>
+      ${actionHtml}
+    `;
+    resultBox.style.display = "block";
+    this.speakText(voiceText);
+  }
+
+  // ==================== FIND NEAR BY CARE ====================
+  openNearbyCareModal() {
+    const modal = document.getElementById("modal-nearby-care");
+    if (modal) modal.style.display = "flex";
+  }
+
+  closeNearbyCareModal() {
+    const modal = document.getElementById("modal-nearby-care");
+    if (modal) modal.style.display = "none";
   }
 
   switchTab(tabId) {
@@ -380,22 +779,23 @@ class ChikitsaApp {
   }
 
   speakText(text) {
-    if (!this.synth) {
-      alert("Text-to-speech is not supported on this browser.");
-      return;
-    }
-    this.synth.cancel(); // Stop ongoing speech
+    try {
+      if (!this.synth) return;
+      this.synth.cancel(); // Stop ongoing speech
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    if (this.lang === "te") {
-      utterance.lang = "te-IN";
-    } else if (this.lang === "hi") {
-      utterance.lang = "hi-IN";
-    } else {
-      utterance.lang = "en-IN";
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (this.lang === "te") {
+        utterance.lang = "te-IN";
+      } else if (this.lang === "hi") {
+        utterance.lang = "hi-IN";
+      } else {
+        utterance.lang = "en-IN";
+      }
+      utterance.rate = 0.9; // Slightly slower for clarity in rural setups
+      this.synth.speak(utterance);
+    } catch (e) {
+      console.warn("Speech synthesis skipped:", e);
     }
-    utterance.rate = 0.9; // Slightly slower for clarity in rural setups
-    this.synth.speak(utterance);
   }
 
   // GLOBAL EVENTS
@@ -407,15 +807,12 @@ class ChikitsaApp {
       });
     });
 
-    // Language modal selection
+    // Language buttons on Step 1 (Multi-page onboarding: Page 1 -> Page 2)
     document.querySelectorAll(".select-lang-choice").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const lang = btn.dataset.lang;
-        this.setLanguage(lang, true);
-        this.closeLanguageModal();
-        if (!this.role) {
-          this.showRoleModal();
-        }
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const lang = btn.dataset.lang || 'en';
+        this.selectLanguageAndGoToPage2(lang);
       });
     });
 
@@ -511,18 +908,22 @@ class ChikitsaApp {
           `Healthcare Worker verified and signed in at ABCD HOSPITAL (Dept: ${dept})`,
           {
             hospital: "ABCD HOSPITAL",
-            staff: nameUpper,
+            staff: rawName,
             department: dept,
             verifiedAt: new Date().toLocaleString()
           }
         );
 
         // Close all onboarding modals completely and immediately open website
+        const oc = document.getElementById("onboarding-container");
+        if (oc) oc.style.display = "none";
         document.querySelectorAll(".modal-backdrop").forEach(m => {
-          m.style.display = "none";
+          if (m.id !== "modal-ivr-simulator" && m.id !== "modal-what-do-i-need" && m.id !== "modal-nearby-care" && m.id !== "modal-add-patient") {
+            m.style.display = "none";
+          }
         });
-        // Open website and switch to ABCD HOSPITAL Facility Dashboard
-        this.switchTab("facility");
+        // Open website on dashboard
+        this.switchTab("dashboard");
       });
     }
 
